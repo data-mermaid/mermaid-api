@@ -1,5 +1,7 @@
 import re
 from collections import defaultdict
+from functools import cache
+from typing import NamedTuple
 
 import django_filters
 from django.contrib.postgres.aggregates import StringAgg
@@ -8,19 +10,52 @@ from django.db.models.functions import Cast, Concat
 from rest_framework import exceptions, serializers
 
 from ...exceptions import check_uuid
-from ...models import (
-    BENTHICLIT_PROTOCOL,
-    BENTHICPIT_PROTOCOL,
-    BENTHICPQT_PROTOCOL,
-    BLEACHINGQC_PROTOCOL,
-    FISHBELT_PROTOCOL,
-    HABITATCOMPLEXITY_PROTOCOL,
-    MACROINVERTEBRATE_PROTOCOL,
-    Observer,
-    SampleEvent,
-    TransectMethod,
-)
+from ...models import Observer, SampleEvent, TransectMethod
+from ...utils import get_subclasses
 from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+
+
+class MethodInfo(NamedTuple):
+    name: str  # relation name from TransectMethod, e.g. "beltfish"
+    sample_unit: str  # path to the sample unit, e.g. "beltfish__transect"
+    sample_unit_fields: frozenset
+    protocol: str
+
+
+@cache
+def sample_unit_methods():
+    """One entry per TransectMethod subclass, so every protocol is covered without
+    listing them here."""
+    methods = []
+    for method_cls in get_subclasses(TransectMethod):
+        name = method_cls._meta.model_name
+        su_field = method_cls.sample_unit_field()
+        su_model = method_cls._meta.get_field(su_field).related_model
+        su_fields = frozenset(f.name for f in su_model._meta.get_fields())
+        methods.append(MethodInfo(name, f"{name}__{su_field}", su_fields, method_cls.protocol))
+    return methods
+
+
+def _sample_unit_field_case(field):
+    """The sample unit's `field` (e.g. "depth", "sample_event__site__name"), whichever
+    protocol the method is."""
+    return Case(
+        *[
+            When(**{f"{m.sample_unit}__{field}__isnull": False}, then=f"{m.sample_unit}__{field}")
+            for m in sample_unit_methods()
+            if field.split("__")[0] in m.sample_unit_fields
+        ]
+    )
+
+
+def _size_display(m):
+    length = Cast(f"{m.sample_unit}__len_surveyed", CharField())
+    if "width" in m.sample_unit_fields:
+        width = Cast(f"{m.sample_unit}__width__name", CharField())
+        return Concat(length, Value("m x "), width)
+    if "len_surveyed" in m.sample_unit_fields:
+        return Concat(length, Value("m"))
+    return Concat(Cast(f"{m.sample_unit}__quadrat_size", CharField()), Value("m"))
 
 
 class ListFilter(django_filters.Filter):
@@ -38,18 +73,8 @@ class SearchNonFieldFilter(django_filters.Filter):
         "protocol_name",
         "site_name",
         "management_name",
-        "benthiclit__observers__profile__first_name",
-        "benthiclit__observers__profile__last_name",
-        "benthicpit__observers__profile__first_name",
-        "benthicpit__observers__profile__last_name",
-        "beltfish__observers__profile__first_name",
-        "beltfish__observers__profile__last_name",
-        "habitatcomplexity__observers__profile__first_name",
-        "habitatcomplexity__observers__profile__last_name",
-        "bleachingquadratcollection__observers__profile__first_name",
-        "bleachingquadratcollection__observers__profile__last_name",
-        "beltinvert__observers__profile__first_name",
-        "beltinvert__observers__profile__last_name",
+        "observers__profile__first_name",
+        "observers__profile__last_name",
     ]
 
     def filter(self, qs, value):
@@ -126,25 +151,18 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
         return se.sample_date
 
     def get_size(self, o):
-        protocol = o.protocol
-        if protocol in (FISHBELT_PROTOCOL, MACROINVERTEBRATE_PROTOCOL):
-            sample_unit = o.sample_unit
-
+        # same precedence as size_display
+        sample_unit = o.sample_unit
+        if hasattr(sample_unit, "width_id"):
             return dict(
                 width=sample_unit.width_id,
                 width_units="m",
                 len_surveyed=sample_unit.len_surveyed,
                 len_surveyed_units="m",
             )
-        elif protocol in (
-            BENTHICLIT_PROTOCOL,
-            BENTHICPIT_PROTOCOL,
-            HABITATCOMPLEXITY_PROTOCOL,
-        ):
-            sample_unit = o.sample_unit
+        if hasattr(sample_unit, "len_surveyed"):
             return dict(len_surveyed=sample_unit.len_surveyed, len_surveyed_units="m")
-        elif protocol == BLEACHINGQC_PROTOCOL:
-            sample_unit = o.sample_unit
+        if hasattr(sample_unit, "quadrat_size"):
             return dict(quadrat_size=sample_unit.quadrat_size, quadrat_size_units="m")
         return None
 
@@ -164,22 +182,7 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
 
 
 class SampleUnitMethodView(BaseProjectApiViewSet):
-    queryset = TransectMethod.objects.select_related(
-        "benthiclit",
-        "benthicpit",
-        "habitatcomplexity",
-        "beltfish",
-        "bleachingquadratcollection",
-        "benthicphotoquadrattransect",
-        "beltinvert",
-        "benthicpit__transect",
-        "benthiclit__transect",
-        "beltfish__transect",
-        "habitatcomplexity__transect",
-        "bleachingquadratcollection__quadrat",
-        "benthicphotoquadrattransect__quadrat_transect",
-        "beltinvert__transect",
-    ).all()
+    queryset = TransectMethod.objects.all()
 
     filterset_class = SampleUnitMethodFilterSet
     serializer_class = SampleUnitMethodSerializer
@@ -199,232 +202,18 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
     )
 
     def get_queryset(self):
-        qs = self.queryset
+        methods = sample_unit_methods()
+        qs = self.queryset.select_related(
+            *[m.name for m in methods], *[m.sample_unit for m in methods]
+        )
 
         protocol_condition = Case(
-            When(benthiclit__id__isnull=False, then=Value(BENTHICLIT_PROTOCOL)),
-            When(benthicpit__id__isnull=False, then=Value(BENTHICPIT_PROTOCOL)),
-            When(
-                habitatcomplexity__id__isnull=False,
-                then=Value(HABITATCOMPLEXITY_PROTOCOL),
-            ),
-            When(
-                bleachingquadratcollection__id__isnull=False,
-                then=Value(BLEACHINGQC_PROTOCOL),
-            ),
-            When(beltfish__id__isnull=False, then=Value(FISHBELT_PROTOCOL)),
-            When(
-                benthicphotoquadrattransect__id__isnull=False,
-                then=Value(BENTHICPQT_PROTOCOL),
-            ),
-            When(
-                beltinvert__id__isnull=False,
-                then=Value(MACROINVERTEBRATE_PROTOCOL),
-            ),
+            *[When(**{f"{m.name}__id__isnull": False}, then=Value(m.protocol)) for m in methods],
             output_field=CharField(),
         )
-
-        site_name_condition = Case(
-            When(
-                benthiclit__transect__sample_event__site__name__isnull=False,
-                then="benthiclit__transect__sample_event__site__name",
-            ),
-            When(
-                benthicpit__transect__sample_event__site__name__isnull=False,
-                then="benthicpit__transect__sample_event__site__name",
-            ),
-            When(
-                habitatcomplexity__transect__sample_event__site__name__isnull=False,
-                then="habitatcomplexity__transect__sample_event__site__name",
-            ),
-            When(
-                bleachingquadratcollection__quadrat__sample_event__site__name__isnull=False,
-                then="bleachingquadratcollection__quadrat__sample_event__site__name",
-            ),
-            When(
-                beltfish__transect__sample_event__site__name__isnull=False,
-                then="beltfish__transect__sample_event__site__name",
-            ),
-            When(
-                benthicphotoquadrattransect__quadrat_transect__sample_event__site__name__isnull=False,
-                then="benthicphotoquadrattransect__quadrat_transect__sample_event__site__name",
-            ),
-            When(
-                beltinvert__transect__sample_event__site__name__isnull=False,
-                then="beltinvert__transect__sample_event__site__name",
-            ),
-        )
-
-        management_name_condition = Case(
-            When(
-                benthiclit__transect__sample_event__management__name__isnull=False,
-                then="benthiclit__transect__sample_event__management__name",
-            ),
-            When(
-                benthicpit__transect__sample_event__management__name__isnull=False,
-                then="benthicpit__transect__sample_event__management__name",
-            ),
-            When(
-                habitatcomplexity__transect__sample_event__management__name__isnull=False,
-                then="habitatcomplexity__transect__sample_event__management__name",
-            ),
-            When(
-                bleachingquadratcollection__quadrat__sample_event__management__name__isnull=False,
-                then="bleachingquadratcollection__quadrat__sample_event__management__name",
-            ),
-            When(
-                beltfish__transect__sample_event__management__name__isnull=False,
-                then="beltfish__transect__sample_event__management__name",
-            ),
-            When(
-                benthicphotoquadrattransect__quadrat_transect__sample_event__management__name__isnull=False,
-                then="benthicphotoquadrattransect__quadrat_transect__sample_event__management__name",
-            ),
-            When(
-                beltinvert__transect__sample_event__management__name__isnull=False,
-                then="beltinvert__transect__sample_event__management__name",
-            ),
-        )
-
-        sample_unit_number_condition = Case(
-            When(
-                benthiclit__transect__number__isnull=False,
-                then="benthiclit__transect__number",
-            ),
-            When(
-                benthicpit__transect__number__isnull=False,
-                then="benthicpit__transect__number",
-            ),
-            When(
-                habitatcomplexity__transect__number__isnull=False,
-                then="habitatcomplexity__transect__number",
-            ),
-            When(
-                beltfish__transect__number__isnull=False,
-                then="beltfish__transect__number",
-            ),
-            When(
-                benthicphotoquadrattransect__quadrat_transect__number__isnull=False,
-                then="benthicphotoquadrattransect__quadrat_transect__number",
-            ),
-            When(
-                beltinvert__transect__number__isnull=False,
-                then="beltinvert__transect__number",
-            ),
-        )
-
-        depth_condition = Case(
-            When(
-                benthiclit__transect__depth__isnull=False,
-                then="benthiclit__transect__depth",
-            ),
-            When(
-                benthicpit__transect__depth__isnull=False,
-                then="benthicpit__transect__depth",
-            ),
-            When(
-                habitatcomplexity__transect__depth__isnull=False,
-                then="habitatcomplexity__transect__depth",
-            ),
-            When(
-                bleachingquadratcollection__quadrat__depth__isnull=False,
-                then="bleachingquadratcollection__quadrat__depth",
-            ),
-            When(
-                beltfish__transect__depth__isnull=False,
-                then="beltfish__transect__depth",
-            ),
-            When(
-                benthicphotoquadrattransect__quadrat_transect__depth__isnull=False,
-                then="benthicphotoquadrattransect__quadrat_transect__depth",
-            ),
-            When(
-                beltinvert__transect__depth__isnull=False,
-                then="beltinvert__transect__depth",
-            ),
-        )
-
-        sample_date_condition = Case(
-            When(
-                benthiclit__transect__sample_event__sample_date__isnull=False,
-                then="benthiclit__transect__sample_event__sample_date",
-            ),
-            When(
-                benthicpit__transect__sample_event__sample_date__isnull=False,
-                then="benthicpit__transect__sample_event__sample_date",
-            ),
-            When(
-                habitatcomplexity__transect__sample_event__sample_date__isnull=False,
-                then="habitatcomplexity__transect__sample_event__sample_date",
-            ),
-            When(
-                bleachingquadratcollection__quadrat__sample_event__sample_date__isnull=False,
-                then="bleachingquadratcollection__quadrat__sample_event__sample_date",
-            ),
-            When(
-                beltfish__transect__sample_event__sample_date__isnull=False,
-                then="beltfish__transect__sample_event__sample_date",
-            ),
-            When(
-                benthicphotoquadrattransect__quadrat_transect__sample_event__sample_date__isnull=False,
-                then="benthicphotoquadrattransect__quadrat_transect__sample_event__sample_date",
-            ),
-            When(
-                beltinvert__transect__sample_event__sample_date__isnull=False,
-                then="beltinvert__transect__sample_event__sample_date",
-            ),
-        )
-
         size_condition = Case(
-            When(
-                benthiclit__id__isnull=False,
-                then=Concat(Cast("benthiclit__transect__len_surveyed", CharField()), Value("m")),
-            ),
-            When(
-                benthicpit__id__isnull=False,
-                then=Concat(Cast("benthicpit__transect__len_surveyed", CharField()), Value("m")),
-            ),
-            When(
-                habitatcomplexity__id__isnull=False,
-                then=Concat(
-                    Cast("habitatcomplexity__transect__len_surveyed", CharField()),
-                    Value("m"),
-                ),
-            ),
-            When(
-                benthicphotoquadrattransect__id__isnull=False,
-                then=Concat(
-                    Cast(
-                        "benthicphotoquadrattransect__quadrat_transect__len_surveyed", CharField()
-                    ),
-                    Value("m"),
-                ),
-            ),
-            When(
-                beltfish__id__isnull=False,
-                then=Concat(
-                    Cast("beltfish__transect__len_surveyed", CharField()),
-                    Value("m x "),
-                    Cast("beltfish__transect__width__name", CharField()),
-                ),
-            ),
-            When(
-                bleachingquadratcollection__id__isnull=False,
-                then=Concat(
-                    Cast("bleachingquadratcollection__quadrat__quadrat_size", CharField()),
-                    Value("m"),
-                ),
-            ),
-            When(
-                beltinvert__id__isnull=False,
-                then=Concat(
-                    Cast("beltinvert__transect__len_surveyed", CharField()),
-                    Value("m x "),
-                    Cast("beltinvert__transect__width__name", CharField()),
-                ),
-            ),
+            *[When(**{f"{m.name}__id__isnull": False}, then=_size_display(m)) for m in methods]
         )
-
         observers = StringAgg(
             Concat(
                 Cast("observers__profile__first_name", CharField()),
@@ -435,45 +224,20 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             distinct=True,
         )
 
-        qs = qs.annotate(
+        return qs.annotate(
             protocol_name=protocol_condition,
-            site_name=site_name_condition,
-            management_name=management_name_condition,
-            sample_unit_number=sample_unit_number_condition,
-            sample_unit_method_depth=depth_condition,
-            sample_date=sample_date_condition,
+            site_name=_sample_unit_field_case("sample_event__site__name"),
+            management_name=_sample_unit_field_case("sample_event__management__name"),
+            sample_unit_number=_sample_unit_field_case("number"),
+            sample_unit_method_depth=_sample_unit_field_case("depth"),
+            sample_date=_sample_unit_field_case("sample_event__sample_date"),
             size_display=size_condition,
             observers_display=observers,
         )
 
-        return qs
-
-    @staticmethod
-    def _matching_transect_method_ids(prj_pk):
-        # OR-ing a *_sample_event__site__project=prj_pk condition per subtype against
-        # self.queryset (select_related + annotated) makes Postgres build every
-        # subtype's full join chain for the whole table before filtering — slow to
-        # list and slow to COUNT for pagination. Narrowing to the project's
-        # sample_event ids first lets each subtype be filtered independently by
-        # __in on a lean queryset; limit_to_project then applies the resulting ids
-        # to self.queryset via cheap id__in.
-        sample_event_ids = SampleEvent.objects.filter(site__project_id=prj_pk).values_list(
-            "id", flat=True
-        )
-        q = (
-            Q(benthiclit__transect__sample_event_id__in=sample_event_ids)
-            | Q(benthicpit__transect__sample_event_id__in=sample_event_ids)
-            | Q(habitatcomplexity__transect__sample_event_id__in=sample_event_ids)
-            | Q(beltfish__transect__sample_event_id__in=sample_event_ids)
-            | Q(bleachingquadratcollection__quadrat__sample_event_id__in=sample_event_ids)
-            | Q(benthicphotoquadrattransect__quadrat_transect__sample_event_id__in=sample_event_ids)
-            | Q(beltinvert__transect__sample_event_id__in=sample_event_ids)
-        )
-        return list(TransectMethod.objects.filter(q).distinct().values_list("id", flat=True))
-
     def limit_to_project(self, request, *args, **kwargs):
         prj_pk = check_uuid(kwargs["project_pk"])
-        self._project_transect_method_ids = self._matching_transect_method_ids(prj_pk)
+        self._project_transect_method_ids = list(TransectMethod.project_method_ids(prj_pk))
         self.queryset = self.get_queryset().filter(id__in=self._project_transect_method_ids)
         return self.queryset
 
@@ -481,36 +245,16 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         context = super().get_serializer_context()
         transect_method_ids = self._project_transect_method_ids
 
-        sample_event_id_case = Case(
-            When(benthiclit__id__isnull=False, then="benthiclit__transect__sample_event_id"),
-            When(benthicpit__id__isnull=False, then="benthicpit__transect__sample_event_id"),
-            When(
-                habitatcomplexity__id__isnull=False,
-                then="habitatcomplexity__transect__sample_event_id",
-            ),
-            When(
-                bleachingquadratcollection__id__isnull=False,
-                then="bleachingquadratcollection__quadrat__sample_event_id",
-            ),
-            When(beltfish__id__isnull=False, then="beltfish__transect__sample_event_id"),
-            When(
-                benthicphotoquadrattransect__id__isnull=False,
-                then="benthicphotoquadrattransect__quadrat_transect__sample_event_id",
-            ),
-            When(beltinvert__id__isnull=False, then="beltinvert__transect__sample_event_id"),
-        )
-        rows = (
+        sample_event_ids = (
             TransectMethod.objects.filter(id__in=transect_method_ids)
-            .annotate(_se_id=sample_event_id_case)
-            .values_list("id", "_se_id")
+            .annotate(_se_id=_sample_unit_field_case("sample_event__id"))
+            .values_list("_se_id", flat=True)
         )
-
-        sample_event_ids = [se_id for _, se_id in rows if se_id is not None]
 
         context["sample_events"] = {
             str(se.id): se
             for se in SampleEvent.objects.select_related("site", "management").filter(
-                id__in=set(sample_event_ids)
+                id__in={se_id for se_id in sample_event_ids if se_id is not None}
             )
         }
 
@@ -518,8 +262,12 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             transectmethod_id__in=transect_method_ids
         )
         observer_lookup = defaultdict(list)
+        # profile_name can COUNT the profile's authusers (nameless profiles); once per profile
+        names = {}
         for obs in observers:
-            observer_lookup[str(obs.transectmethod_id)].append(obs.profile_name)
+            if obs.profile_id not in names:
+                names[obs.profile_id] = obs.profile_name
+            observer_lookup[str(obs.transectmethod_id)].append(names[obs.profile_id])
         for transect_method_id, observers in observer_lookup.items():
             observer_lookup[transect_method_id] = sorted(observers)
 

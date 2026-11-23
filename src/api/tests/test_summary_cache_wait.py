@@ -2,12 +2,16 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
+from django.test import override_settings
 
 from api.models import SummaryCacheQueue
 from api.utils.reports import create_sample_unit_method_summary_report
 from api.utils.summary_cache import SUMMARY_CACHE_POLL_INTERVAL, wait_for_summary_cache
 
+# wait_for_summary_cache short-circuits to False under settings.TESTING (the suite default).
 
+
+@override_settings(TESTING=False)
 def test_wait_skips_unrelated_projects_and_returns_false():
     """Only entries for the requested project_ids trigger a wait; others are ignored."""
     SummaryCacheQueue.objects.create(project_id=uuid.uuid4())
@@ -20,6 +24,7 @@ def test_wait_skips_unrelated_projects_and_returns_false():
     mock_time.sleep.assert_not_called()
 
 
+@override_settings(TESTING=False)
 def test_wait_polls_until_entry_cleared():
     project_id = uuid.uuid4()
     SummaryCacheQueue.objects.create(project_id=project_id)
@@ -40,6 +45,7 @@ def test_wait_polls_until_entry_cleared():
     assert result is False
 
 
+@override_settings(TESTING=False)
 def test_wait_times_out_logs_warning_and_returns_true():
     project_id = uuid.uuid4()
     SummaryCacheQueue.objects.create(project_id=project_id)
@@ -53,6 +59,7 @@ def test_wait_times_out_logs_warning_and_returns_true():
     assert "Timed out" in mock_logger.warning.call_args[0][0]
 
 
+@override_settings(TESTING=False)
 def test_wait_times_out_after_multiple_polls():
     """Deadline not reached until the second check, so sleep must fire at least once."""
     project_id = uuid.uuid4()

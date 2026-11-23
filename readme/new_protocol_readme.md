@@ -9,11 +9,11 @@
 - Create taxonomy/attribute models if the protocol has its own species hierarchy, using Django multi-table inheritance (MTI) from `BaseAttributeModel`; create subclasses directly (not the parent) when seeding — Django MTI auto-creates the parent row
 - Create Sample unit model (subclass of `Transect`)
 - Create Sample unit method model (subclass of `TransectMethod`); set `protocol`, `project_lookup`, and `transect` fields
+  - Subclass `TransectMethod` (directly or through an abstract base), and set `project_lookup` to the path from the method to its project (e.g. `transect__sample_event__site__project`). Code that covers every protocol iterates `get_subclasses(TransectMethod)` instead of listing them, so there is nothing to update for: `TransectMethod.protocol`/`subclass`/`sample_unit`/`project_method_ids()`, the project observers endpoint (`ObserverViewSet`), the submitted records list (`SampleUnitMethodView`), the project sample unit count (`annotate_num_sample_units`) and the submitted summary (`create_submitted_summary`). These find the sample unit via `TransectMethod.sample_unit_field()`: the method needs exactly one `OneToOneField` to a `SampleUnit` subclass. `SampleUnitMethodView` reads `sample_event`, `depth`, `number` and size fields from it, and silently returns null for any the sample unit lacks
 - Create Observations model (subclass of `BaseModel, JSONMixin`); set `project_lookup`
 - Add data policy field to `Project` model
 - Update `CollectRecord.obs_keys` dict with new protocol key and observation key list
 - Update `CollectRecord.sample_unit` with new `elif` branch for the new protocol
-- Update `TransectMethod.protocol` and `TransectMethod.subclass` properties with new `elif hasattr(self, ...)` branch
 
 ## Admin
 
@@ -35,10 +35,6 @@
 - Add `_copy_[protocol]_transects(sample_event_id_map)` function in `src/api/utils/project.py`, mirroring the `_copy_fish_belt_transects` pattern (copy transect, method, observations, observers)
 - Call the new function from `_copy_submitted_data`
 
-## Project Resources
-
-- Update `annotate_num_sample_units()` in `src/api/resources/project.py` with a new UNION ALL branch counting sample units for the new protocol (joining through method → transect → sample event → site → project)
-
 ## Attribute Taxonomy API (if protocol has its own MTI taxonomy)
 
 If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from `BaseAttributeModel`), add:
@@ -48,10 +44,10 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
 - Register in `src/api/resources/sync/views.py` `non_project_sources` so offline clients sync the taxonomy:
   - `"read_only": False` — enables the propose-new-attribute flow for authenticated users
   - `"visibility_filtered": True` — filters nodes based on status/visibility so only approved entries are synced to clients
-  - Add the source type constant to `CACHEABLE_SOURCE_TYPES` so pull responses are cached
 - Add a DB trigger for the new attribute table in `src/api/models/revisions.py` `forward_sql` and `reverse_sql` (follow the `invert_attribute_trigger` pattern); without this the pull endpoint's INNER JOIN on the revision table returns nothing and `last_revision_num` is always null
 - Create a migration that: (1) installs the trigger via `RunSQL`, then (2) backfills revision records for any rows already seeded by data migrations via `RunPython` touching `updated_on` — data migrations run before the trigger migration, so seeded rows have no revision entries
-- If the attribute endpoint serves the full taxonomy hierarchy (e.g. `InvertAttributeViewSet` returning all taxa in a flat list with `SerializerMethodField`s for computed fields), register it as `read_only: True` and add a **separate** `invert_species` source using the leaf-node viewset (e.g. `InvertSpeciesViewSet`) with `read_only: False` — the hierarchy serializer has all taxonomy-specific fields as read-only `SerializerMethodField`s and `Meta.model = <parent>`, so if the write path goes through it the push silently saves a bare parent row (losing `name`/`genus`/etc.) and the `email_superadmin_on_new` signal raises `NoReverseMatch` (the parent `InvertAttribute` is not registered in admin; only its leaf subclasses are). Note: overriding `get_serializer_class()` does NOT fix this — the sync push/pull infrastructure accesses `.serializer_class` directly and bypasses `get_serializer_class()` entirely. Add the leaf-node source type to both `non_project_sources` and `CACHEABLE_SOURCE_TYPES`; the frontend pushes proposed species to this new source
+- If the attribute endpoint serves the full taxonomy hierarchy (e.g. `InvertAttributeViewSet` returning all taxa in a flat list with `SerializerMethodField`s for computed fields), register it as `read_only: True` and add a **separate** `invert_species` source using the leaf-node viewset (e.g. `InvertSpeciesViewSet`) with `read_only: False` — the hierarchy serializer has all taxonomy-specific fields as read-only `SerializerMethodField`s and `Meta.model = <parent>`, so if the write path goes through it the push silently saves a bare parent row (losing `name`/`genus`/etc.) and the `email_superadmin_on_new` signal raises `NoReverseMatch` (the parent `InvertAttribute` is not registered in admin; only its leaf subclasses are). Note: overriding `get_serializer_class()` does NOT fix this — the sync push/pull infrastructure accesses `.serializer_class` directly and bypasses `get_serializer_class()` entirely. Add the leaf-node source type to `non_project_sources`; the frontend pushes proposed species to this new source
+- Push uses the leaf source (`invert_species`); clients pull the root (`invert_attributes`). The leaf pull returns no rows by design: revisions are logged under the root table, which keeps the root-shaped records from being overwritten by leaf-shaped ones in the client's shared local table. Don't add a trigger on the leaf table
 
 ## Choices Endpoint
 
@@ -87,6 +83,7 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
 - Create a sample unit methods validations file. Examples:
   - src/api/submission/validations2/belt_fish.py
   - src/api/submission/validations2/benthic_photo_quadrat_transect.py
+  - Include both `SimilarManagementNameValidator` and `UniqueManagementValidator` on `data.sample_event.management`, in that order: the webapp only offers the duplicate-MR merge when `similar_name` is the field's first warning. Add the list to `test_management_validators_similar_name_first`.
 
 ## API Endpoints
 
@@ -114,14 +111,8 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
 - Add new function to support new protocol in summary report [summary_report.py](src/api/reports/summary_report.py)
 - Create a sample unit method endpoint viewset, example:
   - BenthicPhotoQuadratTransectMethodView
-- Update `src/api/resources/sampleunitmethods/sample_unit_methods.py` to include the new protocol in `SampleUnitMethodView`:
-  - Add `MACROINVERTEBRATE_PROTOCOL` (or equivalent) to the import from `...models`
-  - Add `select_related` entries for the new method and its transect/quadrat to `queryset`
-  - Add a `When(newmethod__id__isnull=False, then=Value(NEW_PROTOCOL))` to each of the seven `Case` annotations: `protocol_condition`, `site_name_condition`, `management_name_condition`, `sample_unit_number_condition`, `depth_condition`, `sample_date_condition`, `size_condition`
-  - Add a `When(newmethod__id__isnull=False, then="newmethod__transect__sample_event_id")` branch to the `sample_event_id_case` `Case` annotation in `get_serializer_context()` (used to populate `context["sample_events"]`)
-  - Add the `Q(newmethod__transect__sample_event_id__in=sample_event_ids)` branch to the `Q` filter in `_matching_transect_method_ids()`
-  - Handle the new protocol in `SampleUnitMethodSerializer.get_size()` to return the appropriate size dict
-  - Add an integration test in `src/api/tests/test_sample_unit_method.py` that GETs `sampleunitmethods/?protocol=<new_protocol>` and asserts `count == 1` and `results[0]["protocol"] == "<new_protocol>"`
+- `SampleUnitMethodView` derives `size`/`size_display` from the sample unit's `width`, `len_surveyed` or `quadrat_size`; a sample unit sized any other way needs `_size_display()` and `get_size()` updated
+- Add an integration test in `src/api/tests/test_sample_unit_method.py` that GETs `sampleunitmethods/?protocol=<new_protocol>` and asserts `count == 1`, `results[0]["protocol"] == "<new_protocol>"`, and non-null `site_name`, `sample_date`, `depth` and `size` (see `test_sampleunitmethods_list_includes_macroinvertebrate`)
 - Update api/urls.py with new viewsets, example:
 
 ```

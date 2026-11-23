@@ -18,13 +18,14 @@ from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, Q
 from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
-from PIL import Image as PILImage
+from PIL import ExifTags, Image as PILImage, ImageMath, JpegImagePlugin
 from PIL.ExifTags import GPSTAGS, TAGS
 
 from ..models import (
     Annotation,
     ClassificationStatus,
     Classifier,
+    CollectRecord,
     Image,
     ObsBenthicPhotoQuadrat,
     Point,
@@ -34,7 +35,7 @@ from ..models import (
 )
 from ..models.classification import parse_bagf_label
 from .inference import classify_via_lambda
-from .q import submit_image_job
+from .q import submit_image_job, submit_job
 from .s3 import upload_file
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,9 @@ def check_if_valid_image(instance):
             w, h = img.size
             if settings.MAX_IMAGE_PIXELS < w * h:
                 raise ValueError(f"Maximum number of pixels is {settings.MAX_IMAGE_PIXELS}.")
+            # Every upload is stored as JPEG, which can't encode a side longer than this.
+            if max(w, h) > MAX_JPEG_DIMENSION:
+                raise ValueError(f"Maximum width and height is {MAX_JPEG_DIMENSION} pixels.")
         return
     except (OSError, AttributeError, TypeError, SyntaxError):
         raise ValueError("Invalid image.")
@@ -112,6 +116,13 @@ def create_thumbnail(image_instance: Image, image_buf: BytesIO | None = None) ->
             img = PILImage.open(f)
             img.load()
 
+    save_kwargs = {}
+    if img.format == "JPEG":
+        # Use the stored image's settings: full colour detail and colour profile only
+        # when the stored image has them. Read the sampling before resizing.
+        full_chroma = JpegImagePlugin.get_sampling(img) == 0
+        save_kwargs = _jpeg_save_kwargs(full_chroma, img.info.get("icc_profile"))
+
     img.thumbnail(size, PILImage.Resampling.LANCZOS)
 
     base, ext = os.path.splitext(image_instance.name)
@@ -119,7 +130,7 @@ def create_thumbnail(image_instance: Image, image_buf: BytesIO | None = None) ->
 
     thumb_io = BytesIO()
     try:
-        img.save(thumb_io, img.format)
+        img.save(thumb_io, img.format, **save_kwargs)
     except OSError as io_err:
         print(f"Cannot create thumbnail for [{image_instance.pk}]: {io_err}")
         raise
@@ -219,31 +230,134 @@ def extract_location(gps_ifd: dict[int, Any]) -> GEOSPoint | None:
     return GEOSPoint(longitude, latitude)
 
 
+NORMALIZED_IMAGE_EXT = "jpg"
+# quality=75 is Pillow's default.
+NORMALIZED_JPEG_SAVE_KWARGS = {"quality": 75}
+# Largest width or height libjpeg can write (JPEG_MAX_DIMENSION; the format allows 65535).
+MAX_JPEG_DIMENSION = 65500
+# Source formats (as detected by Pillow) that are already JPEG-compressed. Every other
+# format may have full colour detail to keep, so it is saved with subsampling=0 (4:4:4)
+# instead of Pillow's default 4:2:0, since colour matters for coral classification
+# (e.g. bleaching), and its ICC profile is carried over.
+JPEG_IMAGE_FORMATS = {"JPEG", "MPO"}
+# JPEG has no alpha, so transparent and partially transparent pixels are blended onto this.
+NORMALIZED_IMAGE_BACKGROUND = (255, 255, 255, 255)
+
+
+def _full_scale_value(image: PILImage.Image) -> float:
+    # The sample value that maps to white. 16-bit data has a fixed range. 32-bit and
+    # float data do not, so use the smallest common range that holds the brightest
+    # pixel: 0-1 (float), 0-255, 0-65535, or else the brightest pixel itself.
+    if image.mode.startswith("I;16"):
+        return 65535
+    high = image.getextrema()[1]
+    if image.mode == "F" and high <= 1:
+        return 1
+    if high <= 255:
+        return 255
+    if high <= 65535:
+        return 65535
+    return high
+
+
+def _scale_to_8bit(image: PILImage.Image) -> PILImage.Image:
+    # Pillow's I;16/I/F -> L/RGB conversion clips at 255 rather than scaling, which
+    # turns nearly every value white (or black, for 0-1 float data), so scale the
+    # full range of the data onto 0-255 first. Values below 0 become black.
+    wide = image if image.mode in ("I", "F") else image.convert("I")
+    # The original mode, since converting to "I" loses that the data is 16-bit.
+    full_scale = _full_scale_value(image)
+    if full_scale == 255:
+        scaled = wide.convert("L")
+    else:
+        scaled = wide.point(lambda v: v * (255 / full_scale)).convert("L")
+    scaled.info.pop("transparency", None)
+
+    # A tRNS colour key is a high-bit-depth value that no scaled pixel can match, so
+    # turn it into an alpha band from the unscaled data before it is lost.
+    key = image.info.get("transparency")
+    if isinstance(key, int):
+        mask = ImageMath.lambda_eval(lambda a: (a["w"] != key) * 255, w=wide).convert("L")
+        scaled.putalpha(mask)
+    return scaled
+
+
+def _has_transparent_pixels(image: PILImage.Image) -> bool:
+    # An alpha band is often fully opaque (e.g. RGBA exports of photos). Compositing
+    # those makes several full-size copies for no change, so check the band first.
+    if "A" in image.getbands():
+        return image.getchannel("A").getextrema()[0] < 255
+    # Palette or colour-key (tRNS) transparency.
+    return image.has_transparency_data
+
+
+# EXIF Orientation value -> counter-clockwise rotation that makes the image upright.
+_ORIENTATION_ROTATIONS = {3: 180, 6: 270, 8: 90}
+
+
+def _exif_rotation(image: PILImage.Image) -> int:
+    try:
+        orientation = image.getexif().get(ExifTags.Base.Orientation)
+    except (AttributeError, KeyError, IndexError, SyntaxError, ValueError):
+        return 0
+    return _ORIENTATION_ROTATIONS.get(orientation, 0)
+
+
+def _is_rgb_icc_profile(icc_profile: bytes | None) -> bool:
+    # Bytes 16-20 of an ICC header are the data colour space signature.
+    return bool(icc_profile) and icc_profile[16:20] == b"RGB "
+
+
+def _jpeg_save_kwargs(full_chroma: bool, icc_profile: bytes | None = None) -> dict:
+    # Save settings for every JPEG written: the stored image and its thumbnail.
+    save_kwargs = dict(NORMALIZED_JPEG_SAVE_KWARGS)
+    if full_chroma:
+        save_kwargs["subsampling"] = 0
+        # Pillow drops the ICC profile on save unless it is passed explicitly. Keep
+        # it only when it describes RGB data, so it still matches the pixels after
+        # the RGB conversion; a CMYK/grey profile would not.
+        if _is_rgb_icc_profile(icc_profile):
+            save_kwargs["icc_profile"] = icc_profile
+    return save_kwargs
+
+
 def save_normalized_imagefile(instance: Image):
     file_obj = _get_file_for_reading(instance.image)
 
     with PILImage.open(file_obj) as image_file:
-        image_format = image_file.format
-        try:
-            for orientation in TAGS.keys():
-                if TAGS[orientation] == "Orientation":
-                    break
+        save_kwargs = _jpeg_save_kwargs(
+            full_chroma=image_file.format not in JPEG_IMAGE_FORMATS,
+            icc_profile=image_file.info.get("icc_profile"),
+        )
 
-            exif = dict(image_file.getexif().items())
+        # Read before the conversions below, which don't keep EXIF.
+        rotation = _exif_rotation(image_file)
 
-            if exif[orientation] == 3:
-                image_file = image_file.rotate(180, expand=True)
-            elif exif[orientation] == 6:
-                image_file = image_file.rotate(270, expand=True)
-            elif exif[orientation] == 8:
-                image_file = image_file.rotate(90, expand=True)
-        except (AttributeError, KeyError, IndexError) as _:
-            pass
+        # More than 8 bits per sample: 16-bit, 32-bit integer or 32-bit float.
+        if image_file.mode.startswith("I;16") or image_file.mode in ("I", "F"):
+            image_file = _scale_to_8bit(image_file)
 
+        # A plain convert("RGB") would drop alpha and expose the hidden colour under
+        # transparent pixels, so composite anything with transparency (alpha band,
+        # palette or colour-key tRNS) onto the background first.
+        if _has_transparent_pixels(image_file):
+            rgba = image_file.convert("RGBA")
+            background = PILImage.new("RGBA", rgba.size, NORMALIZED_IMAGE_BACKGROUND)
+            image_file = PILImage.alpha_composite(background, rgba)
+
+        # JPEG has no alpha channel or palette/16-bit modes, so flatten to RGB first.
+        if image_file.mode != "RGB":
+            image_file = image_file.convert("RGB")
+
+        # Rotate after flattening to RGB, so transparency never has to survive a rotation.
+        if rotation:
+            image_file = image_file.rotate(rotation, expand=True)
+
+        # Every upload is stored as JPEG regardless of the source format.
         # Saving the orientated image back to the image record
         # strips out the EXIF data, which is intentional.
         img_content = BytesIO()
-        image_file.save(img_content, format=image_format)
+        image_file.save(img_content, format="JPEG", **save_kwargs)
 
         # Wrap the BytesIO directly (no copy) and stash it for post_save so
         # thumbnail creation and checksum can read from the buffer already in
@@ -297,18 +411,25 @@ def store_exif(instance: Image) -> None:
 
 
 def create_classification_status(image, status, message=None):
+    """Return False if the image row no longer exists, True otherwise.
+
+    True does not guarantee the row was written: any other write error is logged and
+    swallowed so a transient DB fault never stops classification.
+    """
     try:
         with transaction.atomic():
             # Lock and verify image exists
             if not Image.objects.filter(id=image.pk).select_for_update().exists():
-                print(f"Image {image.pk} was deleted, skipping status update")
-                return
+                logger.warning(f"Image {image.pk} was deleted, skipping status update")
+                return False
             ClassificationStatus.objects.create(image=image, status=status, message=message)
     except IntegrityError:
         # Image was deleted after check but before create
-        print(f"Image {image.pk} was deleted during status update")
+        logger.warning(f"Image {image.pk} was deleted during status update")
+        return False
     except Exception as err:
-        print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
+        logger.warning(f"Writing classification status Image {image.pk}, status: {status}: {err}")
+    return True
 
 
 def generate_points(image: Image, num_points: int, margin: tuple[int, int] = (0, 0)):
@@ -399,7 +520,10 @@ def _classify_image(image_record_id, num_points=None):
     if not image:
         return
 
-    create_classification_status(image, ClassificationStatus.RUNNING)
+    # A user can delete the image (and its S3 file) while the job sits in the queue;
+    # invoking the Lambda then only produces a spurious processing_error.
+    if not create_classification_status(image, ClassificationStatus.RUNNING):
+        return
 
     try:
         classifier_record = Classifier.active()
@@ -414,6 +538,12 @@ def _classify_image(image_record_id, num_points=None):
 
         create_classification_status(image, ClassificationStatus.COMPLETED)
     except Exception as err:
+        # The locked write waits out an in-flight delete, whose post_delete signal
+        # removes the S3 file before the row delete commits. Deleted mid-run, the
+        # failure is expected and retrying cannot help.
+        if not create_classification_status(image, ClassificationStatus.FAILED, str(err)):
+            logger.warning(f"image {image_record_id} was deleted during classification: {err}")
+            return
         # [classify.processing_error] is the literal the CloudWatch metric filter in
         # iac/stacks/constructs/alerts.py matches on the image worker's log group; a
         # retryable failure already has the SQS DLQ alarm behind it, so only a
@@ -425,7 +555,6 @@ def _classify_image(image_record_id, num_points=None):
             logger.exception(
                 f"[classify.processing_error] classifying image {image_record_id} failed"
             )
-        create_classification_status(image, ClassificationStatus.FAILED, str(err))
         # Re-raise only a retryable failure so SQS redelivers it; the status/results
         # writes above are idempotent, so re-running this job is safe.
         if retryable:
@@ -441,6 +570,73 @@ def classify_image_job(image_record_id, num_points=None):
         num_points=num_points,
         visibility_timeout=settings.INFERENCE_JOB_VISIBILITY_TIMEOUT,
     )
+
+
+def _create_annotations_files(image_ids):
+    """Build/upload the confirmed-annotations CSV for each image.
+
+    Submit deletes its CollectRecord before this job runs; an edit shortly after submit
+    recreates one with the same id (see transect_method_to_collect_record). Any image
+    whose collect_record_id is live was therefore edited back out of submitted state
+    since this job was queued, and post_edit already cleared/will clear its file - skip
+    it rather than resurrect a stale CSV for an unsubmitted record.
+
+    Raises if any image failed, so SQS redelivers the whole batch (safe: create_annotations_file
+    overwrites the same key, and an unaffected image just gets harmlessly rebuilt again).
+    """
+    images_by_id = Image.objects.in_bulk(image_ids)
+    live_collect_record_ids = set(
+        CollectRecord.objects.filter(
+            id__in={image.collect_record_id for image in images_by_id.values()}
+        ).values_list("id", flat=True)
+    )
+
+    failed_image_ids = []
+    for image_id in image_ids:
+        image = images_by_id.get(image_id)
+        if image is None:
+            logger.info(f"Skipping annotations file for image {image_id}: image no longer exists")
+            continue
+        if image.collect_record_id in live_collect_record_ids:
+            logger.info(
+                f"Skipping annotations file for image {image_id}: "
+                "collect record was edited back out of submitted state"
+            )
+            continue
+        try:
+            image.create_annotations_file()
+        except Exception:
+            logger.exception(f"Failed to create annotations file for image {image_id}")
+            failed_image_ids.append(image_id)
+
+    if failed_image_ids:
+        raise RuntimeError(f"Failed to create annotations files for images: {failed_image_ids}")
+
+
+# Per-job visibility ceiling, well under SQS's 43200s (12h) hard limit: a batch
+# needing more than this splits into multiple jobs instead of one that would tie
+# up a worker slot for the maximum possible window.
+_MAX_BATCH_VISIBILITY_TIMEOUT = 1800
+
+
+def create_annotations_files_job(image_ids):
+    per_image = settings.ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE
+    max_batch_size = max(1, _MAX_BATCH_VISIBILITY_TIMEOUT // per_image)
+
+    job_ids = []
+    for start in range(0, len(image_ids), max_batch_size):
+        batch = image_ids[start : start + max_batch_size]
+        visibility_timeout = max(settings.SQS_MESSAGE_VISIBILITY, len(batch) * per_image)
+        job_ids.append(
+            submit_job(
+                0,
+                True,
+                _create_annotations_files,
+                image_ids=batch,
+                visibility_timeout=visibility_timeout,
+            )
+        )
+    return job_ids
 
 
 def chunked_queryset_dataframe(qs, chunk_size=10000):

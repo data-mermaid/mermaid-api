@@ -158,10 +158,13 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         permission_classes=cr_permissions,
     )
     def submit(self, request, project_pk):
-        record_ids = request.data.get("ids")
+        record_ids = request.data.get("ids") or []
         profile = request.user.profile
 
-        output = submit_collect_records(profile, record_ids, CollectRecordSerializer)
+        try:
+            output = submit_collect_records(profile, record_ids, CollectRecordSerializer)
+        except ValueError as err:
+            raise ParseError(err) from err
 
         return Response(output)
 

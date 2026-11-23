@@ -43,10 +43,14 @@ from ..permissions import (
     ProjectDataCollectorPermission,
     ProjectDataReadOnlyPermission,
     UnauthenticatedReadOnlyPermission,
+    cached_lookup,
+    get_request_api_key,
 )
 from ..utils.auth0utils import get_jwt_token, get_unverified_profile
 from ..utils.project import citation_retrieved_text
 from .mixins import MethodAuthenticationMixin, OrFilterSetMixin
+
+SENSITIVE_FIELDS = {"secret_hash"}
 
 
 class ModelNameReadOnlyField(serializers.Field):
@@ -72,17 +76,23 @@ class TagField(serializers.Field):
 
 class PointFieldValidated(GeometryField):
     def to_internal_value(self, value):
+        if not isinstance(value, dict):
+            raise ValidationError("Invalid point: expected a GeoJSON object")
+        # Reject other types here: GDAL logs them as errors, which reach admin emails.
+        # Case-insensitive because GDAL accepts "point".
+        if str(value.get("type")).lower() != "point":
+            raise ValidationError('Invalid point: type must be "Point"')
         coords = value.get("coordinates")
-        if coords is None or len(coords) != 2:
+        if not isinstance(coords, (list, tuple)) or len(coords) != 2:
             raise ValidationError("Invalid coordinates")
-        x = value["coordinates"][0]
-        y = value["coordinates"][1]
+        x, y = coords
 
-        if not isinstance(x, float) and not isinstance(x, int):
+        # bool is a subclass of int, but GDAL rejects JSON true/false.
+        if isinstance(x, bool) or not isinstance(x, (int, float)):
             raise ValidationError(
                 f"Invalid 'x' coordinate. Type is not double or integer for '{x}'"
             )
-        if not isinstance(y, float) and not isinstance(y, int):
+        if isinstance(y, bool) or not isinstance(y, (int, float)):
             raise ValidationError(
                 f"Invalid 'y' coordinate. Type is not double or integer for '{y}'"
             )
@@ -96,13 +106,35 @@ class StandardResultPagination(PageNumberPagination):
     max_page_size = 5000
 
 
+REQUEST_PROFILE_CACHE_ATTR = "_request_profile_cache"
+
+
+def get_request_profile(request):
+    """The profile a write is attributed to.
+
+    An API key request carries no JWT, so the profile comes from the user the
+    key resolved to; the key rides in the same `Bearer` header, and passing it
+    to the JWT decoder would raise instead.
+
+    Memoized per-request, since a single write endpoint can call save() many times.
+    """
+
+    def _load():
+        if get_request_api_key(request) is not None:
+            return getattr(request.user, "profile", None)
+
+        token = get_jwt_token(request)
+        return get_unverified_profile(token)
+
+    return cached_lookup(request, REQUEST_PROFILE_CACHE_ATTR, "profile", _load)
+
+
 class CurrentProfileDefault:
     requires_context = True
 
     def __call__(self, serializer_field):
         try:
-            token = get_jwt_token(serializer_field.context["request"])
-            return get_unverified_profile(token)
+            return get_request_profile(serializer_field.context["request"])
         except exceptions.AuthenticationFailed:
             return None
 
@@ -156,8 +188,7 @@ class BaseAPISerializer(serializers.ModelSerializer):
         if request is None:
             return
 
-        token = get_jwt_token(request)
-        kwargs["updated_by"] = get_unverified_profile(token)
+        kwargs["updated_by"] = get_request_profile(request)
         return super().save(**kwargs)
 
 
@@ -550,11 +581,17 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
     permission_classes = [DefaultPermission]
 
     def get_serializer_class_for_fields(self, serializer_class, fields):
-        fields = fields.strip().split(",")
-        fields.sort()
-        fields = tuple(fields)
-        if fields in self._serializer_class_for_fields:
-            return self._serializer_class_for_fields[fields]
+        field_set = {f.strip() for f in fields.split(",") if f.strip()}
+
+        # `fields` rebuilds the serializer from names the client picked, so it
+        # would otherwise reach columns the serializer deliberately omits.
+        sensitive = field_set & SENSITIVE_FIELDS
+        if sensitive:
+            raise ValidationError(
+                {"fields": f"Invalid field names: {', '.join(sorted(sensitive))}"}
+            )
+
+        fields = tuple(sorted(field_set))
 
         # Validate that all requested field names are known to this serializer.
         valid_fields = set(serializer_class._declared_fields.keys())
@@ -565,6 +602,11 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         if invalid_fields:
             raise ValidationError({"fields": f"Invalid field names: {', '.join(invalid_fields)}"})
 
+        # The cache is shared by every viewset, so key it by serializer class too.
+        cache_key = (serializer_class, fields)
+        if cache_key in self._serializer_class_for_fields:
+            return self._serializer_class_for_fields[cache_key]
+
         # Doing this because a simple copy.copy() doesn't work here.
         # Set fields and explicitly clear exclude to avoid DRF's assertion that
         # both cannot be set simultaneously (exclude may be inherited from parent Meta).
@@ -572,7 +614,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         limited_fields_serializer = type(
             "LimitedFieldsSerializer", (serializer_class,), {"Meta": meta}
         )
-        self._serializer_class_for_fields[fields] = limited_fields_serializer
+        self._serializer_class_for_fields[cache_key] = limited_fields_serializer
         return limited_fields_serializer
 
     def get_serializer_class(self):
@@ -588,8 +630,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         return serializer_class
 
     def _set_updated_by(self, request):
-        token = get_jwt_token(request)
-        return get_unverified_profile(token)
+        return get_request_profile(request)
 
     def perform_create(self, serializer):
         updated_by = self._set_updated_by(self.request)

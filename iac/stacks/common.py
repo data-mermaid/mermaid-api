@@ -1,6 +1,7 @@
 import json
 
 from aws_cdk import (
+    ArnFormat,
     Duration,
     RemovalPolicy,
     Stack,
@@ -24,6 +25,67 @@ from aws_cdk import (
     aws_wafv2 as wafv2,
 )
 from constructs import Construct
+
+# Columns and regex from the AWS Athena guide "Create the table for ALB
+# access logs in Athena using partition projection". The trailing
+# ` ?( .*)?` absorbs fields ALB adds in future.
+ALB_ACCESS_LOG_COLUMNS = [
+    ("type", "string"),
+    ("time", "string"),
+    ("elb", "string"),
+    ("client_ip", "string"),
+    ("client_port", "int"),
+    ("target_ip", "string"),
+    ("target_port", "int"),
+    ("request_processing_time", "double"),
+    ("target_processing_time", "double"),
+    ("response_processing_time", "double"),
+    ("elb_status_code", "int"),
+    ("target_status_code", "string"),
+    ("received_bytes", "bigint"),
+    ("sent_bytes", "bigint"),
+    ("request_verb", "string"),
+    ("request_url", "string"),
+    ("request_proto", "string"),
+    ("user_agent", "string"),
+    ("ssl_cipher", "string"),
+    ("ssl_protocol", "string"),
+    ("target_group_arn", "string"),
+    ("trace_id", "string"),
+    ("domain_name", "string"),
+    ("chosen_cert_arn", "string"),
+    ("matched_rule_priority", "string"),
+    ("request_creation_time", "string"),
+    ("actions_executed", "string"),
+    ("redirect_url", "string"),
+    ("lambda_error_reason", "string"),
+    ("target_port_list", "string"),
+    ("target_status_code_list", "string"),
+    ("classification", "string"),
+    ("classification_reason", "string"),
+    ("conn_trace_id", "string"),
+]
+ALB_ACCESS_LOG_REGEX = (
+    r"([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*):([0-9]*) ([^ ]*)[:-]([0-9]*) ([-.0-9]*) "
+    r"([-.0-9]*) ([-.0-9]*) (|[-0-9]*) (-|[-0-9]*) ([-0-9]*) ([-0-9]*) "
+    r'"([^ ]*) (.*) (- |[^ ]*)" "([^"]*)" ([A-Z0-9-_]+) ([A-Za-z0-9.-]*) ([^ ]*) '
+    r'"([^"]*)" "([^"]*)" "([^"]*)" ([-.0-9]*) ([^ ]*) "([^"]*)" "([^"]*)" '
+    r'"([^ ]*)" "([^\s]+?)" "([^\s]+)" "([^ ]*)" "([^ ]*)" ?([^ ]*)? ?( .*)?'
+)
+
+
+def bare_log_group_arn(scope: Construct, log_group: logs.ILogGroup) -> str:
+    """The log-group ARN without the `:*` that `ILogGroup.log_group_arn` ends in.
+
+    From 2027-04-26 CloudWatch Logs authorizes log-group actions such as
+    DescribeLogStreams against this form; stream actions keep the `:*` form.
+    """
+    return Stack.of(scope).format_arn(
+        service="logs",
+        resource="log-group",
+        resource_name=log_group.log_group_name,
+        arn_format=ArnFormat.COLON_RESOURCE_NAME,
+    )
 
 
 class CommonStack(Stack):
@@ -143,9 +205,13 @@ class CommonStack(Stack):
                         "logs:PutLogEvents",
                         "logs:DescribeLogStreams",
                     ],
+                    # log_group_arn is the stream form (`...:log-group:<name>:*`). From
+                    # 2027-04-26 DescribeLogStreams is authorized against the bare
+                    # log-group ARN, which also covers the stream-form-only grant
+                    # CDK's FlowLog adds to this role.
                     resources=[
                         vpc_flow_logs_group.log_group_arn,
-                        f"{vpc_flow_logs_group.log_group_arn}:*",
+                        bare_log_group_arn(self, vpc_flow_logs_group),
                     ],
                 )
             )
@@ -380,12 +446,23 @@ class CommonStack(Stack):
 
         # Reject any non-SSL connection to the database.
         # NOTE: associating a parameter group requires an instance reboot to take effect.
+        # The log_* parameters are dynamic: changing them applies without a reboot.
+        # (Leave `description` alone: changing it replaces the parameter group.)
         db_parameter_group = rds.ParameterGroup(
             self,
             "PostgresRdsV2ParameterGroup",
             engine=postgres_engine,
             description="Enforce SSL on all connections to the MERMAID RDS instance",
-            parameters={"rds.force_ssl": "1"},
+            parameters={
+                "rds.force_ssl": "1",
+                # Who connected, from where, and for how long. Django opens a
+                # connection per request (CONN_MAX_AGE = 0), so this is chatty.
+                "log_connections": "1",
+                "log_disconnections": "1",
+                # Slow queries (ms) and lock waits longer than deadlock_timeout (1s).
+                "log_min_duration_statement": "1000",
+                "log_lock_waits": "1",
+            },
         )
 
         self.database = rds.DatabaseInstance(
@@ -395,15 +472,33 @@ class CommonStack(Stack):
             engine=postgres_engine,
             parameter_group=db_parameter_group,
             allow_major_version_upgrade=True,
+            # t3/BURSTABLE3 has its OWN instance-level I/O credit system
+            # (EBSIOBalance%/EBSByteBalance%), separate from the volume-level IOPS
+            # credits fixed by storage_type=GP3 below. If prod latency spikes again
+            # after that fix, check these two metrics before assuming it's unrelated
+            # -- they're not covered by the ReadLatency/WriteLatency alarms in
+            # alerts.py, which only catch the symptom, not this specific cause.
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
                 ec2.InstanceSize.MEDIUM,
             ),
+            # gp2's burst IOPS credits ran out during the 2026-10-13 incident
+            # (BurstBalance 80%->0% over ~66min, then 15-20x latency for ~80min).
+            # gp3 gives a flat 3,000 IOPS/125 MiB/s baseline with no credit model, at
+            # the same $/GB price as gp2 here -- fixes the volume-level cliff, not
+            # the separate instance-level one noted above.
+            storage_type=rds.StorageType.GP3,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             backup_retention=Duration.days(7),
             deletion_protection=True,
             removal_policy=RemovalPolicy.SNAPSHOT,
             credentials=rds.Credentials.from_secret(database_credentials_secret),
+            # /aws/rds/instance/<id>/postgresql: the log_* parameters above land here.
+            cloudwatch_logs_exports=["postgresql"],
+            cloudwatch_logs_retention=logs.RetentionDays.THREE_MONTHS,
+            # Enhanced Monitoring: OS metrics (CPU steal, memory, swap, disk queue)
+            # that the CloudWatch RDS metrics don't show, published to RDSOSMetrics.
+            monitoring_interval=Duration.seconds(60),
         )
 
         self.backup_bucket = s3.Bucket(
@@ -596,6 +691,134 @@ class CommonStack(Stack):
             idle_timeout=Duration.seconds(300),  # To match webserver timeout
         )
 
+        # ALB access and connection logs. ELB log delivery only supports SSE-S3.
+        alb_logs_bucket = s3.Bucket(
+            self,
+            "AlbLogsBucket",
+            bucket_name=f"mermaid-alb-logs-{self.account}-{self.region}",
+            removal_policy=RemovalPolicy.RETAIN,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
+            lifecycle_rules=[
+                s3.LifecycleRule(id="AlbLogsExpiry", expiration=Duration.days(90)),
+            ],
+        )
+        self.load_balancer.log_access_logs(alb_logs_bucket, prefix="access")
+        self.load_balancer.log_connection_logs(alb_logs_bucket, prefix="connection")
+
+        # Athena table over the access logs. Partition projection derives the
+        # day partitions from the S3 key, so no crawler or ALTER TABLE is needed.
+        # Query from the alb-logs workgroup as AthenaRole, e.g.
+        #   SELECT client_ip, count(*) FROM alb_logs.access_logs
+        #   WHERE day = '2026/10/28' GROUP BY 1 ORDER BY 2 DESC LIMIT 20
+        alb_access_logs_location = (
+            f"s3://{alb_logs_bucket.bucket_name}/access/AWSLogs/{self.account}"
+            f"/elasticloadbalancing/{self.region}"
+        )
+        alb_logs_database = glue.CfnDatabase(
+            self,
+            "AlbLogsDatabase",
+            catalog_id=self.account,
+            database_input=glue.CfnDatabase.DatabaseInputProperty(
+                name="alb_logs",
+                description="Glue database for ALB access log analysis",
+            ),
+        )
+        alb_access_logs_table = glue.CfnTable(
+            self,
+            "AlbAccessLogsTable",
+            catalog_id=self.account,
+            database_name=alb_logs_database.ref,
+            table_input=glue.CfnTable.TableInputProperty(
+                name="access_logs",
+                table_type="EXTERNAL_TABLE",
+                parameters={
+                    "projection.enabled": "true",
+                    "projection.day.type": "date",
+                    # Matches the AlbLogsExpiry rule: older days have no objects.
+                    "projection.day.range": "NOW-90DAYS,NOW",
+                    "projection.day.format": "yyyy/MM/dd",
+                    "projection.day.interval": "1",
+                    "projection.day.interval.unit": "DAYS",
+                    "storage.location.template": f"{alb_access_logs_location}/${{day}}",
+                },
+                storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                    columns=[
+                        glue.CfnTable.ColumnProperty(name=name, type=type_)
+                        for name, type_ in ALB_ACCESS_LOG_COLUMNS
+                    ],
+                    location=f"{alb_access_logs_location}/",
+                    input_format="org.apache.hadoop.mapred.TextInputFormat",
+                    output_format="org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+                    serde_info=glue.CfnTable.SerdeInfoProperty(
+                        serialization_library="org.apache.hadoop.hive.serde2.RegexSerDe",
+                        parameters={
+                            "serialization.format": "1",
+                            "input.regex": ALB_ACCESS_LOG_REGEX,
+                        },
+                    ),
+                ),
+                partition_keys=[glue.CfnTable.ColumnProperty(name="day", type="string")],
+            ),
+        )
+        alb_access_logs_table.add_dependency(alb_logs_database)
+
+        # Query through the Athena role and results bucket created with the VPC flow
+        # logs setup, so query results never land in (and need write access to)
+        # the log bucket.
+        # shortcut: tied to enable_vpc_flow_logs (always on in deploys); hoist the
+        # Athena role and results bucket out of that block if it is ever turned off.
+        if enable_vpc_flow_logs:
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    actions=["s3:GetObject", "s3:ListBucket"],
+                    resources=[
+                        alb_logs_bucket.bucket_arn,
+                        alb_logs_bucket.arn_for_objects("access/*"),
+                    ],
+                )
+            )
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    actions=["glue:GetDatabase", "glue:GetTable", "glue:GetPartitions"],
+                    resources=[
+                        f"arn:aws:glue:{self.region}:{self.account}:catalog",
+                        f"arn:aws:glue:{self.region}:{self.account}:database/{alb_logs_database.ref}",
+                        f"arn:aws:glue:{self.region}:{self.account}:table/{alb_logs_database.ref}/access_logs",
+                    ],
+                )
+            )
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    actions=[
+                        "athena:StartQueryExecution",
+                        "athena:GetQueryExecution",
+                        "athena:GetQueryResults",
+                        "athena:GetWorkGroup",
+                    ],
+                    resources=[f"arn:aws:athena:{self.region}:{self.account}:workgroup/alb-logs"],
+                )
+            )
+            athena.CfnWorkGroup(
+                self,
+                "AlbLogsWorkGroup",
+                name="alb-logs",
+                description="WorkGroup for querying ALB access logs",
+                work_group_configuration=athena.CfnWorkGroup.WorkGroupConfigurationProperty(
+                    result_configuration=athena.CfnWorkGroup.ResultConfigurationProperty(
+                        output_location=f"s3://{athena_results_bucket.bucket_name}/alb-logs/",
+                        encryption_configuration=athena.CfnWorkGroup.EncryptionConfigurationProperty(
+                            encryption_option="SSE_S3",
+                        ),
+                    ),
+                    # 10 GiB: far above 90 days of ALB logs; stops a runaway query.
+                    bytes_scanned_cutoff_per_query=10 * 1024**3,
+                    enforce_work_group_configuration=True,
+                    publish_cloud_watch_metrics_enabled=True,
+                ),
+            )
+
         # DNS setup
         root_domain = "datamermaid.org"
         api_domain = f"api2.{root_domain}"
@@ -694,6 +917,50 @@ class CommonStack(Stack):
                         sampled_requests_enabled=True,
                     ),
                 ),
+                # A tighter per-IP ceiling for requests that present a MERMAID
+                # API key (`Authorization: Bearer mmd_...`). WAF counts by the
+                # connection's source IP, so unlike the app's failure limiter it
+                # cannot be dodged with a forged X-Forwarded-For. It sees every
+                # request, not just failed ones, so the limit sits well above
+                # what a legitimate script needs. Auth0 tokens share the Bearer
+                # scheme but never start with mmd_, so they are not counted.
+                wafv2.CfnWebACL.RuleProperty(
+                    name="RateLimitApiKeyPerIP",
+                    priority=5,
+                    action=wafv2.CfnWebACL.RuleActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                            limit=300,
+                            aggregate_key_type="IP",
+                            scope_down_statement=wafv2.CfnWebACL.StatementProperty(
+                                byte_match_statement=wafv2.CfnWebACL.ByteMatchStatementProperty(
+                                    field_to_match=wafv2.CfnWebACL.FieldToMatchProperty(
+                                        single_header={"Name": "authorization"},
+                                    ),
+                                    # Django splits the header on any whitespace and
+                                    # compares the scheme case-insensitively, so the
+                                    # match is normalised the same way; otherwise
+                                    # "BEARER\tmmd_..." would slip past the rule.
+                                    positional_constraint="CONTAINS",
+                                    search_string="bearer mmd_",
+                                    text_transformations=[
+                                        wafv2.CfnWebACL.TextTransformationProperty(
+                                            priority=0, type="COMPRESS_WHITE_SPACE"
+                                        ),
+                                        wafv2.CfnWebACL.TextTransformationProperty(
+                                            priority=1, type="LOWERCASE"
+                                        ),
+                                    ],
+                                ),
+                            ),
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiKeyRateLimit",
+                        sampled_requests_enabled=True,
+                    ),
+                ),
             ],
         )
 
@@ -721,7 +988,8 @@ class CommonStack(Stack):
                 iam.PolicyStatement(
                     actions=["logs:CreateLogStream", "logs:PutLogEvents"],
                     principals=[iam.ServicePrincipal("delivery.logs.amazonaws.com")],
-                    resources=[f"{waf_log_group.log_group_arn}:*"],
+                    # log_group_arn already ends in `:*`, the stream form these actions need.
+                    resources=[waf_log_group.log_group_arn],
                     conditions={
                         "StringEquals": {"aws:SourceAccount": self.account},
                         "ArnLike": {

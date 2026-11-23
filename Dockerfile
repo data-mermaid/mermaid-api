@@ -1,56 +1,113 @@
-FROM python:3.13-slim-bookworm
-LABEL maintainer="<sysadmin@datamermaid.org>"
+# Base image versions. DEBIAN_CODENAME also selects the PGDG apt repo, so it
+# must match the base image's Debian release.
+ARG PYTHON_VERSION=3.13
+ARG DEBIAN_CODENAME=bookworm
+
+# App user and paths, shared by all stages. ENV PATH/PYTHONPATH and APP_DIR are
+# derived from these, so a different APP_USER produces a consistent image.
+ARG APP_USER=webapp
+ARG APP_UID=1000
+
+# ============================================================
+# Stage 0: Base — Python plus the PGDG apt repo
+# ============================================================
+# Both later stages take libpq from PGDG, so psycopg's C module is compiled
+# against the same libpq it runs on. Built against an older one, it leaves out
+# the newer libpq functions.
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS base
+ARG DEBIAN_CODENAME
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV LANG=C.UTF-8
-ENV LANGUAGE=C.UTF-8
-ENV LC_ALL=C.UTF-8
-ENV PYTHONPATH="/var/projects/webapp"
-ENV PATH="/home/webapp/.local/bin:${PATH}"
-ENV PYTHONUNBUFFERED=1
-ENV DJANGO_SETTINGS_MODULE=app.settings
 
-# Install OS dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget gnupg lsb-release ca-certificates \
- && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
- && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
- && apt-get update \
- && apt-get install -y --no-install-recommends  \
+    wget gnupg ca-certificates \
+ && wget --quiet -O /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && gpg --homedir "$(mktemp -d)" --dry-run --import --import-options show-only --with-colons /usr/share/keyrings/pgdg.asc \
+      | awk -F: '/^fpr:/ {print $10}' \
+      | grep -qx 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
+ && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt ${DEBIAN_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get purge -y --auto-remove gnupg \
+ && rm -rf /var/lib/apt/lists/*
+
+# ============================================================
+# Stage 1: Builder — install build deps and compile pip pkgs
+# ============================================================
+FROM base AS builder
+ARG APP_USER
+ARG APP_UID
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
-    gnupg \
     build-essential \
     libpq-dev \
     python3-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd ${APP_USER} && useradd -m --no-log-init --uid ${APP_UID} -g ${APP_USER} ${APP_USER}
+
+WORKDIR /var/projects/${APP_USER}
+COPY requirements.txt .
+# Install, then drop the packages' own test suites in the same layer. Nothing
+# imports them at runtime; the runtime-stage checks below confirm the app still
+# imports. Bytecode is kept so containers do not recompile on every start.
+RUN su -l ${APP_USER} -c "pip install --no-cache-dir -r /var/projects/${APP_USER}/requirements.txt" \
+ && find /home/${APP_USER}/.local -type d -name tests -prune -exec rm -rf {} +
+
+# ============================================================
+# Stage 2: Runtime — lean production image
+# ============================================================
+FROM base AS runtime
+ARG APP_USER
+ARG APP_UID
+ARG APP_DIR=/var/projects/${APP_USER}
+LABEL maintainer="<sysadmin@datamermaid.org>"
+
+ENV LANG=C.UTF-8
+ENV LANGUAGE=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV PYTHONPATH="${APP_DIR}"
+ENV PATH="/home/${APP_USER}/.local/bin:${PATH}"
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=app.settings
+# psycopg raises ImportError instead of falling back to its pure-Python
+# implementation, which decodes every row in Python.
+ENV PSYCOPG_IMPL=c
+
+# Install runtime-only OS deps (no build-essential, libpq-dev, python3-dev).
+# Django GIS only loads the GDAL shared library. gdal-bin is not used (the app
+# runs no GDAL CLI tools) and hard-depends on Debian's python3, python3-gdal and
+# python3-numpy. libgdal39 is the GDAL 3.13 library from PGDG; the build fails
+# loudly if a GDAL upgrade renames it.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client-16 \
-    gdal-bin \
-    python3-gdal \
- && apt-get purge -y --auto-remove gnupg lsb-release \
+    libgdal39 \
  && rm -rf /var/lib/apt/lists/*
 
 # gunicorn will listen on this port
 EXPOSE 8081
 
-ARG APP_USER=webapp
-ARG APP_DIR=/var/projects/${APP_USER}
-RUN groupadd ${APP_USER} && useradd -m --no-log-init -g ${APP_USER} ${APP_USER}
+# Create the app dir owned by the app user. WORKDIR alone would create it as
+# root, and COPY --chown does not change an existing destination directory.
+RUN groupadd ${APP_USER} && useradd -m --no-log-init --uid ${APP_UID} -g ${APP_USER} ${APP_USER} \
+ && install -d -o ${APP_USER} -g ${APP_USER} ${APP_DIR}
 
-# Copy your application code to the container (make sure you create a .dockerignore file if any large files or directories should be excluded)
+# Copy only the installed Python packages from the builder stage
+COPY --from=builder --chown=${APP_USER}:${APP_USER} /home/${APP_USER}/.local /home/${APP_USER}/.local
+
 WORKDIR ${APP_DIR}
 
-ADD requirements.txt .
-RUN su ${APP_USER} -c "pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt"
-RUN rm ${APP_DIR}/requirements.txt
-
-ADD ./src .
-ADD ./iac/settings ./iac/settings
-RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
+COPY --chown=${APP_USER}:${APP_USER} ./src .
+COPY --chown=${APP_USER}:${APP_USER} ./iac/settings ./iac/settings
 
 # Run everything from here forward as non-root
 USER ${APP_USER}:${APP_USER}
 
-# Call collectstatic (customize the following line with the minimal environment variables needed for manage.py to run):
-RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
+# Smoke test in the runtime stage, against runtime libraries only: psycopg loads
+# libpq, and collectstatic sets up Django with every installed app. (`manage.py
+# check` cannot run here: importing the URL conf queries the database.)
+# The assert catches a builder layer cached with a newer libpq than the runtime's.
+RUN python -c "import psycopg, pandas, pyarrow; assert psycopg.pq.__build_version__ <= psycopg.pq.version(), (psycopg.pq.__build_version__, psycopg.pq.version())" \
+ && SECRET_KEY='abc' python manage.py collectstatic --noinput
 
 # Container health check for the API web server. Probes the DB-independent
 # liveness path served by HealthEndpointMiddleware (returns before auth/DB), via
@@ -69,4 +126,17 @@ RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
   CMD ["wget", "--quiet", "--tries=1", "--timeout=3", "--spider", "http://localhost:8081/health/"]
 
-CMD ["/var/projects/webapp/docker-entry.sh"]
+# Relative to WORKDIR (APP_DIR), so it follows APP_USER.
+CMD ["./docker-entry.sh"]
+
+# ============================================================
+# Stage 3: Dev — adds test/dev dependencies on top of runtime
+# ============================================================
+FROM runtime AS dev
+ARG APP_USER
+
+USER root
+COPY requirements-dev.txt /tmp/requirements-dev.txt
+RUN su -l ${APP_USER} -c "pip install --no-cache-dir -r /tmp/requirements-dev.txt" \
+ && rm /tmp/requirements-dev.txt
+USER ${APP_USER}:${APP_USER}

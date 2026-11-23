@@ -1,33 +1,28 @@
-import os
 import sys
 import warnings
-from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
-from django.http import FileResponse
 from django.template.defaultfilters import pluralize
 from django.utils.functional import cached_property
 from rest_framework import exceptions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from ..exceptions import UnknownProtocolError, check_uuid
+from ..exceptions import check_uuid
 from ..models import Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
 from ..signals.classification import post_edit
-from ..utils import create_iso_date_string, get_protected_related_objects, truthy
+from ..utils import get_protected_related_objects, truthy
 from ..utils.duplicates import (
     NOT_UNIQUE_SITE_CODE,
     SIMILAR_NAME_CODE,
     find_duplicate_managements,
     find_duplicate_sites,
 )
-from ..utils.project import get_safe_project_name
 from ..utils.sample_unit_methods import edit_transect_method
 
 
@@ -255,50 +250,6 @@ class SampleUnitMethodEditMixin:
             return Response(
                 f"{self.get_queryset().model.__name__} with id {pk} not found", status=404
             )
-
-
-class SampleUnitMethodSummaryReport:
-    @action(detail=False, methods=["GET"])
-    def xlsx(self, request, project_pk):
-        from ..utils.reports import create_sample_unit_method_summary_report
-
-        output_path = None
-        try:
-            model = self.get_queryset().model
-            try:
-                protocol = getattr(model, "protocol")
-                output_path = create_sample_unit_method_summary_report(
-                    project_ids=[project_pk], protocol=protocol, request=request
-                )
-            except UnknownProtocolError as upe:
-                raise exceptions.ValidationError(f"Unknown protocol '{protocol}'") from upe
-
-            try:
-                base_file_name = f"{get_safe_project_name(project_pk)}_{protocol}_{create_iso_date_string(delimiter='_')}"
-                xlsx_file_name = f"{base_file_name}.xlsx"
-                zip_file_name = f"{base_file_name}.zip"
-            except ValueError as e:
-                raise exceptions.ValidationError(f"[{project_pk}] Project does not exist") from e
-
-            try:
-                with ZipFile(zip_file_name, "w", compression=ZIP_DEFLATED) as z:
-                    z.write(output_path, arcname=xlsx_file_name)
-
-                z_file = open(zip_file_name, "rb")
-                response = FileResponse(z_file, content_type="application/zip")
-                response["Content-Length"] = os.fstat(z_file.fileno()).st_size
-                response["Content-Disposition"] = f'attachment; filename="{zip_file_name}"'
-
-                return response
-            finally:
-                if zip_file_name:
-                    Path(zip_file_name).unlink(missing_ok=True)
-
-                if output_path:
-                    Path(output_path).unlink(missing_ok=True)
-        except Exception as err:
-            print(err)
-            return Response(str(err), status=500)
 
 
 class CopyRecordsMixin:

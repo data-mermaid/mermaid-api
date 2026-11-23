@@ -77,7 +77,10 @@ class UniqueInvertBeltTransectValidator(BaseValidator):
                 return (
                     ERROR,
                     self.DUPLICATE_INVERT_BELT_TRANSECT,
-                    {"duplicate_transect_method": str(transect_method.pk)},
+                    {
+                        "duplicate_transect_method": str(transect_method.pk),
+                        "protocol": protocol,
+                    },
                 )
         return OK
 

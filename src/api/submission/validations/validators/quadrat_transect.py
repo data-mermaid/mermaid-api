@@ -71,7 +71,10 @@ class UniqueQuadratTransectValidator(BaseValidator):
                 return (
                     ERROR,
                     self.DUPLICATE_QUADRAT_TRANSECT,
-                    {"duplicate_transect_method": str(transect_method.pk)},
+                    {
+                        "duplicate_transect_method": str(transect_method.pk),
+                        "protocol": protocol,
+                    },
                 )
         return OK
 

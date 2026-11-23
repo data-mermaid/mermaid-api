@@ -125,11 +125,9 @@ class BaseAnnotationValidator(BaseValidator):
         if not num_points_per_quadrat:
             num_points_per_quadrat = settings.INFERENCE_DEFAULT_NUM_POINTS
 
+        # Only IDs are needed, so read values in place of model instances.
         annos = (
-            Annotation.objects.select_related(
-                "point", "point__image", "benthic_attribute", "growth_form"
-            )
-            .filter(point__image__collect_record_id=cr_id)
+            Annotation.objects.filter(point__image__collect_record_id=cr_id)
             .order_by(
                 "point__image__created_on",
                 "point_id",
@@ -137,6 +135,13 @@ class BaseAnnotationValidator(BaseValidator):
                 "-score",
                 "benthic_attribute__name",
                 "growth_form__name",
+            )
+            .values_list(
+                "point__image_id",
+                "point_id",
+                "benthic_attribute_id",
+                "growth_form_id",
+                "is_confirmed",
             )
         )
 
@@ -152,28 +157,23 @@ class BaseAnnotationValidator(BaseValidator):
             )
         )
         points = set()
-        for anno in annos:
-            image_id = str(anno.point.image_id)
-            point_id = str(anno.point_id)
-            benthic_attribute_id = str(anno.benthic_attribute_id)
-            growth_form_id = str(anno.growth_form.id) if anno.growth_form else ""
-            uid = f"{image_id}::{benthic_attribute_id}::{growth_form_id}"
+        for anno_image_id, anno_point_id, attribute_id, anno_growth_form_id, is_confirmed in annos:
+            image_id = str(anno_image_id)
+            point_id = str(anno_point_id)
+            growth_form_id = str(anno_growth_form_id) if anno_growth_form_id else ""
+            uid = f"{image_id}::{attribute_id}::{growth_form_id}"
 
-            if anno.is_confirmed:
+            if is_confirmed:
                 images[image_id][uid]["image_id"] = image_id
                 images[image_id][uid]["confirmed"] += 1
-                images[image_id][uid]["attribute"] = anno.benthic_attribute.id
-                images[image_id][uid]["growth_form"] = (
-                    anno.growth_form.id if anno.growth_form else ""
-                )
+                images[image_id][uid]["attribute"] = attribute_id
+                images[image_id][uid]["growth_form"] = anno_growth_form_id or ""
                 points.add(point_id)
             elif point_id not in points:
                 images[image_id][uid]["image_id"] = image_id
                 images[image_id][uid]["unconfirmed"] += 1
-                images[image_id][uid]["attribute"] = anno.benthic_attribute.id
-                images[image_id][uid]["growth_form"] = (
-                    anno.growth_form.id if anno.growth_form else ""
-                )
+                images[image_id][uid]["attribute"] = attribute_id
+                images[image_id][uid]["growth_form"] = anno_growth_form_id or ""
                 points.add(point_id)
 
         rows = []

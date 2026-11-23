@@ -2,6 +2,7 @@ from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import connection
 from django.db.models.expressions import RawSQL
 
+from ...exceptions import check_uuid
 from ...mocks import MockRequest
 
 
@@ -18,11 +19,53 @@ def _get_subquery(queryset, pk_field_name):
     return sql
 
 
-def _get_records(viewset, profile_id, filters, generate_visibility_removes=False):
+def _select_related_lookups(queryset):
+    """`select_related` paths of `queryset`, flattened to `__`-joined lookups.
+
+    `.raw()` keeps a queryset's `prefetch_related` lookups but drops its
+    `select_related`, so serializers that read related objects query once per row.
+    """
+    select_related = queryset.query.select_related
+    if not isinstance(select_related, dict):
+        # True (all non-null FKs) or False: nothing explicit to prefetch.
+        return []
+
+    lookups = []
+
+    def walk(tree, prefix):
+        for name, children in tree.items():
+            path = f"{prefix}{name}"
+            if children:
+                walk(children, f"{path}__")
+            else:
+                lookups.append(path)
+
+    walk(select_related, "")
+    return lookups
+
+
+def _get_records(
+    viewset,
+    profile_id,
+    filters,
+    generate_visibility_removes=False,
+    rp_project=None,
+    rp_profile=None,
+):
     queryset = viewset.get_queryset()
     model_class = queryset.model
+
+    # limit_to_project() normally does this scoping; the sync path bypasses it by
+    # calling get_queryset() directly, so without this the revision join below was
+    # the only filter -- e.g. api_collectrecord sorted/joined its whole table.
+    if rp_project is not None and getattr(model_class, "project_lookup", None):
+        queryset = queryset.filter(**{model_class.project_lookup: rp_project})
+    if rp_profile is not None and hasattr(model_class, "profile_id"):
+        queryset = queryset.filter(profile_id=rp_profile)
+
     pk_field_name = model_class._meta.pk.column
-    sub_query = _get_subquery(queryset, pk_field_name)
+    # The joins would be discarded by .raw(); the related rows are prefetched instead.
+    sub_query = _get_subquery(queryset.select_related(None), pk_field_name)
     table_name = model_class._meta.db_table
 
     # UPDATES
@@ -54,7 +97,7 @@ def _get_records(viewset, profile_id, filters, generate_visibility_removes=False
             revision.updated_on DESC, revision.revision_num  DESC
     """
 
-    updates = queryset.raw(updates_sql)
+    updates = queryset.raw(updates_sql).prefetch_related(*_select_related_lookups(queryset))
 
     # DELETES
     delete_filters = [
@@ -155,7 +198,7 @@ def get_record(viewset, profile_id, record_id):
     :return: Updates and deletes
     :rtype: tuple
     """
-    filters = [f"revision.record_id = '{record_id}'::uuid"]
+    filters = [f"revision.record_id = '{check_uuid(record_id)}'::uuid"]
     updates, deletes, removes = list(_get_records(viewset, profile_id, filters))
     if len(updates) == 1:
         return updates[0]
@@ -214,7 +257,14 @@ def get_records(viewset, profile_id, required_params=None, generate_visibility_r
     if rp_revision_num is not None:
         filters.append(f"revision.revision_num > {rp_revision_num}")
 
-    return _get_records(viewset, profile_id, filters, generate_visibility_removes)
+    return _get_records(
+        viewset,
+        profile_id,
+        filters,
+        generate_visibility_removes,
+        rp_project=rp_project,
+        rp_profile=rp_profile,
+    )
 
 
 def serialize_revisions(serializer, updates, deletes, removes, skip_deletes=False):

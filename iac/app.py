@@ -1,7 +1,18 @@
 import os
 
+import jsii
 import nag_suppressions
-from aws_cdk import App, Aspects, Environment, aws_s3 as s3
+from aws_cdk import (
+    App,
+    AspectPriority,
+    Aspects,
+    Environment,
+    IAspect,
+    RemovalPolicy,
+    Validations,
+    aws_logs as logs,
+    aws_s3 as s3,
+)
 from cdk_nag import AwsSolutionsChecks
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
@@ -21,8 +32,24 @@ tags = {
 }
 
 
+@jsii.implements(IAspect)
+class LogGroupHygiene:
+    """Delete log groups with their construct and never let one keep logs forever.
+
+    CDK-created log groups (e.g. the ECS aws_logs driver's) default to RETAIN with
+    no retention, so every construct rename left an orphaned group behind.
+    Imported groups (e.g. /mermaid/{env}/api) have no CfnLogGroup and are not touched.
+    """
+
+    def visit(self, node):
+        if isinstance(node, logs.CfnLogGroup):
+            node.apply_removal_policy(RemovalPolicy.DESTROY)
+            if node.retention_in_days is None:
+                node.retention_in_days = 30  # matches the ONE_MONTH used in the stacks
+
+
 app = App()
-Aspects.of(app).add(AwsSolutionsChecks(verbose=True))
+Validations.of(app).add_plugins(AwsSolutionsChecks(app, verbose=True))
 
 cdk_env = Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
@@ -174,6 +201,12 @@ prod_inference_stack = InferenceStack(
 )
 
 prod_api_stack.add_dependency(prod_inference_stack)
+
+# Only the API stacks: WAF, CloudTrail and VPC flow log groups (common and
+# cloudtrail stacks) are RETAINed on purpose.
+for api_stack in (dev_api_stack, prod_api_stack):
+    # MUTATING: runs before read-only aspects such as cdk-nag, so they see the result.
+    Aspects.of(api_stack).add(LogGroupHygiene(), priority=AspectPriority.MUTATING)
 
 cloudtrail_stack = CloudTrailStack(
     app,

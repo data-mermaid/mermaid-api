@@ -12,7 +12,7 @@ from rest_framework.utils.encoders import JSONEncoder
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
 
-from ..utils import get_sample_unit_number
+from ..utils import get_sample_unit_number, get_subclasses
 from ..utils.related import get_related_project
 from .base import (
     APPROVAL_STATUSES,
@@ -461,6 +461,16 @@ class ProjectProfile(BaseModel):
             self._old_values = {k: v for k, v in self._loaded_values.items() if k in notify_fields}
         self._new_values = model_to_dict(self, fields=notify_fields)
         super().save(*args, **kwargs)
+        # Re-baseline so a later save of this same instance diffs against what's now in the DB
+        update_fields = kwargs.get("update_fields")
+        if update_fields is None:
+            saved = self._meta.concrete_fields
+        else:
+            saved = [self._meta.get_field(name) for name in update_fields]
+        self._loaded_values = {
+            **getattr(self, "_loaded_values", {}),
+            **{f.attname: getattr(self, f.attname) for f in saved},
+        }
 
     class Meta:
         db_table = "project_profile"
@@ -612,60 +622,53 @@ class TransectMethod(BaseModel):
     class Meta:
         db_table = "transectmethod"
 
-    @property
-    def protocol(self):
-        if hasattr(self, "benthiclit"):
-            return self.benthiclit.protocol
-        elif hasattr(self, "benthicpit"):
-            return self.benthicpit.protocol
-        elif hasattr(self, "beltfish"):
-            return self.beltfish.protocol
-        elif hasattr(self, "habitatcomplexity"):
-            return self.habitatcomplexity.protocol
-        elif hasattr(self, "bleachingquadratcollection"):
-            return self.bleachingquadratcollection.protocol
-        elif hasattr(self, "benthicphotoquadrattransect"):
-            return self.benthicphotoquadrattransect.protocol
-        elif hasattr(self, "beltinvert"):
-            return self.beltinvert.protocol
-        return None
+    @classmethod
+    def project_method_ids(cls, project_id):
+        """Subquery of the project's method ids, one branch per subclass so new protocols
+        are included automatically; much faster than OR-ing joins across every protocol table.
+        """
+        ids = [
+            method_cls.objects.filter(**{method_cls.project_lookup: project_id}).values_list(
+                "pk", flat=True
+            )
+            for method_cls in get_subclasses(cls)
+        ]
+        return ids[0].union(*ids[1:], all=True)
 
     @property
     def subclass(self):
-        if hasattr(self, "benthiclit"):
-            return getattr(self, "benthiclit")
-        elif hasattr(self, "benthicpit"):
-            return getattr(self, "benthicpit")
-        elif hasattr(self, "beltfish"):
-            return getattr(self, "beltfish")
-        elif hasattr(self, "habitatcomplexity"):
-            return getattr(self, "habitatcomplexity")
-        elif hasattr(self, "bleachingquadratcollection"):
-            return getattr(self, "bleachingquadratcollection")
-        elif hasattr(self, "benthicphotoquadrattransect"):
-            return getattr(self, "benthicphotoquadrattransect")
-        elif hasattr(self, "beltinvert"):
-            return getattr(self, "beltinvert")
+        for method_cls in get_subclasses(TransectMethod):
+            name = method_cls._meta.model_name
+            if hasattr(self, name):
+                return getattr(self, name)
         return None
 
     @property
+    def protocol(self):
+        subclass = self.subclass
+        return subclass.protocol if subclass is not None else None
+
+    @classmethod
+    def sample_unit_field(cls):
+        """Name of a subclass's OneToOneField to its sample unit."""
+        return next(
+            (
+                f.name
+                for f in cls._meta.get_fields()
+                if isinstance(f, models.OneToOneField) and issubclass(f.related_model, SampleUnit)
+            ),
+            None,
+        )
+
+    @property
     def sample_unit(self):
-        sample_unit_method_subclass = self.subclass
-        if sample_unit_method_subclass is None:
+        subclass = self.subclass
+        if subclass is None:
             return None
-
-        related_objects = [
-            f
-            for f in sample_unit_method_subclass._meta.get_fields()
-            if isinstance(f, models.OneToOneField)
-        ]
-
-        one2one_fields = [ro for ro in related_objects if ro.name.endswith("_ptr") is False]
-        if len(one2one_fields) == 1:
-            sample_unit_field = one2one_fields[0]
-            return getattr(sample_unit_method_subclass, sample_unit_field.name)
-
-        raise NameError("Sample unit field can't be found")
+        field = subclass.sample_unit_field()
+        if field is None:
+            raise NameError("Sample unit field can't be found")
+        return getattr(subclass, field)
 
     def __str__(self):
         return str(_("transect method"))
@@ -804,46 +807,6 @@ class ArchivedRecord(models.Model):
     record = models.JSONField(null=True, blank=True)
 
 
-class Covariate(BaseModel, JSONMixin):
-    SUPPORTED_COVARIATES = (
-        (
-            "aca_benthic",
-            "Benthic_Allen Coral Atlas",
-        ),
-        (
-            "aca_geomorphic",
-            "Geomorphic_Allen Coral Atlas",
-        ),
-        ("beyer_score", "50 Reefs score_Beyer"),
-        ("beyer_scorecn", "50 Reefs connectivity_Beyer"),
-        ("beyer_scorecy", "50 Reefs cyclones_Beyer"),
-        ("beyer_scorepfc", "50 Reefs thermal future_Beyer"),
-        ("beyer_scoreth", "50 Reefs thermal history_Beyer"),
-        ("beyer_scoretr", "50 Reefs thermal recent_Beyer"),
-        ("andrello_grav_nc", "Market gravity_Andrello"),
-        ("andrello_sediment", "Sediment_Andrello"),
-        ("andrello_nutrient", "Nutrient_Andrello"),
-        ("andrello_pop_count", "Human population_Andrello"),
-        ("andrello_num_ports", "Number of ports_Andrello"),
-        ("andrello_reef_value", "Tourism value_Andrello"),
-        ("andrello_cumul_score", "Cumulative local pressure_Andrello"),
-    )
-
-    site = models.ForeignKey("Site", related_name="covariates", on_delete=models.CASCADE)
-    name = models.CharField(max_length=100, choices=SUPPORTED_COVARIATES)
-    datestamp = models.DateField()
-    requested_datestamp = models.DateField()
-    value = models.JSONField(null=True, blank=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["site", "name"], name="unique_sitecovariate_site_name")
-        ]
-
-    def __str__(self):
-        return f"{self.site.name} - {self.name}"
-
-
 class AuditRecord(JSONMixin):
     SUBMIT_RECORD_EVENT_TYPE = 1
     EDIT_RECORD_EVENT_TYPE = 2
@@ -871,11 +834,13 @@ class Notification(BaseModel):
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
+    RELEASE = "release"
 
     STATUSES = (
         (INFO, INFO),
         (WARNING, WARNING),
         (ERROR, ERROR),
+        (RELEASE, RELEASE),
     )
 
     title = models.CharField(max_length=200)

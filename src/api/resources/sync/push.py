@@ -10,7 +10,7 @@ from api.resources.sampleunitmethods.sample_unit_methods import SampleUnitMethod
 from api.utils.sample_unit_methods import get_project
 from ...utils.project import delete_project
 from ...utils.q import submit_job
-from .utils import ViewRequest
+from .utils import create_view_request
 
 
 def get_request_method(record):
@@ -53,10 +53,7 @@ def _has_push_conflict(record_id, last_revision_num):
 
 def _get_sumethods(request, se):
     project = get_project(se, se.project_lookup.split("__"))
-    vw_request = ViewRequest(user=request.user, headers=request.headers, method="GET")
-    vw_request.META = request.META
-    vw_request.authenticators = request.authenticators
-    vw_request.successful_authenticator = request.successful_authenticator
+    vw_request = create_view_request(request, method="GET")
 
     viewset = SampleUnitMethodView(request=vw_request, format_kwarg=None)
     queryset = viewset.limit_to_project(vw_request, project_pk=project.pk)

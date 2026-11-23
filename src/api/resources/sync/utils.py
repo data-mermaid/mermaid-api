@@ -4,6 +4,7 @@ from ...permissions import REQUEST_CACHE_ATTRS
 class ViewRequest:
     def __init__(self, user, headers, method="GET"):
         self.user = user
+        self.auth = None
         self.data = {}
         self.query_params = {}
         self.GET = {}
@@ -21,6 +22,10 @@ def create_view_request(request, method=None, data=None):
         vw_request.data[k] = v
 
     vw_request.META = request.META
+    # resources/base.get_request_profile reads request.auth to tell an API key
+    # request from a JWT one; without this a key-authenticated push would take
+    # the JWT branch and try to decode the key as a JWT.
+    vw_request.auth = getattr(request, "auth", None)
     vw_request.authenticators = request.authenticators
     vw_request.successful_authenticator = request.successful_authenticator
 

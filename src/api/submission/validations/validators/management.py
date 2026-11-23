@@ -11,11 +11,18 @@ from ..statuses import ERROR, OK, WARN
 from .base import BaseValidator, validator_result
 
 
+def _get_management(management_id):
+    try:
+        check_uuid(management_id)
+    except ParseError:
+        return None
+    return Management.objects.get_or_none(id=management_id)
+
+
 class UniqueManagementValidator(BaseValidator):
     MANAGEMENT_NOT_FOUND = "management_not_found"
     SITE_NOT_FOUND = "site_not_found"
     NOT_UNIQUE = "not_unique_management"
-    SIMILAR_NAME = SIMILAR_NAME_CODE
 
     def __init__(self, management_path, site_path, **kwargs):
         self.management_path = management_path
@@ -52,21 +59,12 @@ class UniqueManagementValidator(BaseValidator):
 
         return Management.objects.raw(match_sql, params)
 
-    def _duplicate_by_name(self, project_id, management_id, name):
-        return find_duplicate_managements(
-            project_id=project_id, name=name, exclude_id=management_id
-        )
-
     @validator_result
     def __call__(self, collect_record, **kwargs):
         management_id = self.get_value(collect_record, self.management_path) or ""
         site_id = self.get_value(collect_record, self.site_path) or ""
-        try:
-            check_uuid(management_id)
-            management = Management.objects.get_or_none(id=management_id)
-            if management is None:
-                return ERROR, self.MANAGEMENT_NOT_FOUND
-        except ParseError:
+        management = _get_management(management_id)
+        if management is None:
             return ERROR, self.MANAGEMENT_NOT_FOUND
         try:
             check_uuid(site_id)
@@ -75,17 +73,35 @@ class UniqueManagementValidator(BaseValidator):
         except ParseError:
             return ERROR, self.SITE_NOT_FOUND
 
-        project_id = management.project_id
-        name = management.name
-
-        qry = self._duplicate_by_site(project_id, management_id, site_id)
+        qry = self._duplicate_by_site(management.project_id, management_id, site_id)
         results = qry[:3]
         if len(results) > 0:
             matches = [str(r.id) for r in results]
             return WARN, self.NOT_UNIQUE, {"matches": matches}
 
-        qry = self._duplicate_by_name(project_id, management_id, name)
-        results = qry[:3]
+        return OK
+
+
+class SimilarManagementNameValidator(BaseValidator):
+    # Separate from UniqueManagementValidator so both warnings surface when both
+    # are true; a value validation can only return one result. A missing MR is
+    # reported by UniqueManagementValidator, so it's OK here.
+    SIMILAR_NAME = SIMILAR_NAME_CODE
+
+    def __init__(self, management_path, **kwargs):
+        self.management_path = management_path
+        super().__init__(**kwargs)
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        management_id = self.get_value(collect_record, self.management_path) or ""
+        management = _get_management(management_id)
+        if management is None:
+            return OK
+
+        results = find_duplicate_managements(
+            project_id=management.project_id, name=management.name, exclude_id=management_id
+        )[:3]
         if len(results) > 0:
             matches = [str(r.id) for r in results]
             return WARN, self.SIMILAR_NAME, {"matches": matches}
@@ -105,11 +121,7 @@ class ManagementRuleValidator(BaseValidator):
     def __call__(self, collect_record, **kwargs):
         management_id = self.get_value(collect_record, self.management_path) or ""
 
-        try:
-            check_uuid(management_id)
-            management = Management.objects.get_or_none(id=management_id)
-        except ParseError:
-            management = None
+        management = _get_management(management_id)
 
         if management is None:
             return ERROR, self.MANAGEMENT_NOT_FOUND

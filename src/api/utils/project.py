@@ -12,9 +12,7 @@ import botocore.exceptions
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from django.db.models.fields.related import OneToOneField
 from django.utils import timezone
-from django.utils.text import slugify
 
 from ..models import (
     BLEACHINGQC_PROTOCOL,
@@ -45,7 +43,6 @@ from ..models import (
     QuadratCollection,
     QuadratTransect,
     SampleEvent,
-    SampleUnit,
     Site,
     TransectMethod,
 )
@@ -57,10 +54,16 @@ from ..models.classification import (
     get_image_bucket,
     get_image_storage_config,
 )
-from . import delete_instance_and_related_objects, get_value, is_uuid, s3 as s3_utils
-from .email import mermaid_email
+from . import (
+    delete_instance_and_related_objects,
+    get_subclasses,
+    get_value,
+    is_uuid,
+    s3 as s3_utils,
+)
+from .classification import create_annotations_files_job
+from .email import emails_with_accounts, mermaid_email
 from .notification import suppress_all_notifications
-from .q import submit_job
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +89,32 @@ def _generate_new_image_path(old_path, new_image_id):
         return UUID_PATTERN.sub(str(new_image_id), old_path, count=1)
 
 
+def _delete_image_files(items, context):
+    """Delete (storage_config, path) items with one client and batched requests per bucket."""
+    keys_by_target = defaultdict(list)
+    for config, path in items:
+        target = (config["bucket"], config["access_key"], config["secret_key"])
+        keys_by_target[target].append(f"{config['s3_path']}{path}")
+
+    for (bucket, access_key, secret_key), keys in keys_by_target.items():
+        try:
+            errors = s3_utils.delete_files(
+                bucket, keys, aws_access_key_id=access_key, aws_secret_access_key=secret_key
+            )
+        except Exception:
+            logger.error(
+                f"Failed to delete {len(keys)} S3 files from {bucket} during {context}",
+                exc_info=True,
+            )
+            continue
+        for error in errors:
+            logger.error(
+                f"Failed to delete S3 file {error.get('Key')} during {context}: "
+                f"{error.get('Message')}"
+            )
+        logger.info(f"Deleted {len(keys) - len(errors)} of {len(keys)} S3 files from {bucket}")
+
+
 class S3CopyTracker:
     """
     Prevents orphaned S3 files when a database transaction fails after
@@ -100,9 +129,8 @@ class S3CopyTracker:
 
     def _get_client(self, access_key, secret_key):
         # Normalize None to actual defaults so identical credentials share one client
-        actual_key = access_key or settings.AWS_ACCESS_KEY_ID
-        actual_secret = secret_key or settings.AWS_SECRET_ACCESS_KEY
-        cache_key = (actual_key, actual_secret)
+        cache_key = s3_utils.resolve_credentials(access_key, secret_key)
+        actual_key, actual_secret = cache_key
         with self._lock:
             if cache_key not in self._clients:
                 self._clients[cache_key] = s3_utils.get_client(actual_key, actual_secret)
@@ -133,11 +161,8 @@ class S3CopyTracker:
         # Use server-side copy when credentials match (same account); otherwise
         # fall back to get+put via move_file_cross_account (cross-account, e.g.
         # when migrating images between project statuses).
-        same_credentials = source_config.get("access_key") == dest_config.get(
-            "access_key"
-        ) and source_config.get("secret_key") == dest_config.get("secret_key")
         try:
-            if same_credentials:
+            if s3_utils.same_credentials(source_config, dest_config):
                 client = self._get_client(
                     dest_config.get("access_key"), dest_config.get("secret_key")
                 )
@@ -159,6 +184,12 @@ class S3CopyTracker:
                     dest_access_key=dest_config["access_key"],
                     dest_secret_key=dest_config["secret_key"],
                     delete_source=False,
+                    source_client=self._get_client(
+                        source_config["access_key"], source_config["secret_key"]
+                    ),
+                    dest_client=self._get_client(
+                        dest_config["access_key"], dest_config["secret_key"]
+                    ),
                 )
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
@@ -171,30 +202,7 @@ class S3CopyTracker:
         return new_path
 
     def cleanup(self):
-        for dest_config, path in self.copied_files:
-            try:
-                full_key = f"{dest_config['s3_path']}{path}"
-                s3_utils.delete_file(
-                    bucket=dest_config["bucket"],
-                    blob_name=full_key,
-                    aws_access_key_id=dest_config["access_key"],
-                    aws_secret_access_key=dest_config["secret_key"],
-                )
-                logger.info(f"Cleaned up S3 file: {path}")
-            except Exception as e:
-                logger.error(f"Failed to cleanup S3 file {path}: {e}")
-
-
-def _create_annotations_file_job(image_id):
-    try:
-        image = Image.objects.get(id=image_id)
-        image.create_annotations_file()
-    except Image.DoesNotExist:
-        # Expected when the image's project (e.g. a demo project) was deleted/recreated
-        # before this async job ran. Not an error worth reporting to Sentry.
-        logger.info(f"Skipping annotations file for image {image_id}: image no longer exists")
-    except Exception:
-        logger.error(f"Failed to create annotations file for image {image_id}", exc_info=True)
+        _delete_image_files(self.copied_files, "cleanup of copied files")
 
 
 def _copy_image_s3(source_image, new_image_id, s3_tracker, dest_bucket=None):
@@ -325,7 +333,7 @@ def _copy_image_db(
     _t_points_annotations = time.monotonic()
 
     image_id = new_image.id
-    transaction.on_commit(lambda: submit_job(0, True, _create_annotations_file_job, image_id))
+    transaction.on_commit(lambda: create_annotations_files_job([image_id]))
 
     # Copy the latest ClassificationStatus so the webapp knows the image has been processed
     latest_status = source_image.statuses.order_by("-created_on").first()
@@ -393,23 +401,7 @@ def delete_collected_pqt_images(image_ids):
     )
     Image.objects.filter(id__in=image_ids).delete()
 
-    def _cleanup_s3():
-        for config, path in cleanup_items:
-            try:
-                full_key = f"{config['s3_path']}{path}"
-                s3_utils.delete_file(
-                    bucket=config["bucket"],
-                    blob_name=full_key,
-                    aws_access_key_id=config["access_key"],
-                    aws_secret_access_key=config["secret_key"],
-                )
-            except Exception:
-                logger.error(
-                    f"Failed to delete S3 file during project deletion: {path}",
-                    exc_info=True,
-                )
-
-    transaction.on_commit(_cleanup_s3)
+    transaction.on_commit(lambda: _delete_image_files(cleanup_items, "project deletion"))
 
 
 def _get_sample_unit_method_label(sample_unit_method, sample_unit_name):
@@ -426,22 +418,11 @@ def _get_sample_unit_method_label(sample_unit_method, sample_unit_name):
     return " ".join(number_label)
 
 
-def get_sample_unit_field(model):
-    return next(
-        (
-            field.name
-            for field in model._meta.get_fields()
-            if isinstance(field, OneToOneField) and issubclass(field.related_model, SampleUnit)
-        ),
-        None,
-    )
-
-
 def _create_submitted_sample_unit_method_summary(model_cls, project):
     DEFAULT_UPDATED_BY = "N/A"
     summary = defaultdict(dict)
     protocol = model_cls.protocol
-    sample_unit_name = get_sample_unit_field(model_cls)
+    sample_unit_name = model_cls.sample_unit_field()
 
     if sample_unit_name is None:
         return summary
@@ -452,9 +433,17 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         f"{sample_unit_name}__sample_event",
         f"{sample_unit_name}__sample_event__site",
         f"{sample_unit_name}__sample_event__management",
-        "updated_by",
-    ).prefetch_related("observers")
+        f"{sample_unit_name}__updated_by",
+    ).prefetch_related("observers__profile")
     queryset = queryset.filter(**qry_filter)
+
+    # full_name can COUNT the profile's authusers (nameless profiles); once per profile per protocol
+    names = {}
+
+    def profile_name(profile):
+        if profile.pk not in names:
+            names[profile.pk] = profile.full_name
+        return names[profile.pk]
 
     for record in queryset:
         sample_unit = getattr(record, sample_unit_name)
@@ -465,8 +454,8 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         label = _get_sample_unit_method_label(record, sample_unit_name)
         updated_by = DEFAULT_UPDATED_BY
         if sample_unit.updated_by:
-            updated_by = sample_unit.updated_by.full_name
-        observers = [o.profile_name for o in record.observers.all()]
+            updated_by = profile_name(sample_unit.updated_by)
+        observers = [profile_name(o.profile) for o in record.observers.all()]
 
         if site_id not in summary:
             summary[site_id] = {"site_name": "", "sample_unit_methods": {protocol: []}}
@@ -499,7 +488,7 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
 def create_submitted_summary(project):
     summary = {}
     protocols = []
-    sample_unit_methods = TransectMethod.__subclasses__()
+    sample_unit_methods = get_subclasses(TransectMethod)
     for sample_unit_method in sample_unit_methods:
         sample_unit_method_summary = _create_submitted_sample_unit_method_summary(
             sample_unit_method, project
@@ -1035,7 +1024,13 @@ def _copy_observers(old_tm_id, new_tm_id):
 
 
 def email_members_of_new_project(project, owner_profile):
-    for project_profile in project.profiles.filter(~Q(profile=owner_profile)):
+    project_profiles = list(
+        project.profiles.filter(~Q(profile=owner_profile)).select_related("profile")
+    )
+    linked_emails = set(emails_with_accounts([pp.profile for pp in project_profiles]))
+    for project_profile in project_profiles:
+        if project_profile.profile.email not in linked_emails:
+            continue
         context = {
             "owner": owner_profile,
             "project": project,
@@ -1047,14 +1042,6 @@ def email_members_of_new_project(project, owner_profile):
             to=[project_profile.profile.email],
             context=context,
         )
-
-
-def get_safe_project_name(project_id):
-    try:
-        project = Project.objects.get(id=project_id)
-        return slugify(project.name, allow_unicode=True).replace("-", "_")
-    except Project.DoesNotExist as e:
-        raise ValueError(f"Project with id '{project_id}' does not exist") from e
 
 
 def get_profiles(project):
@@ -1076,9 +1063,16 @@ def default_citation(project, profiles=None):
         if p.is_admin is True and p.profile.citation_name is not None
     ]
     year = ""
-    latest_se = SampleEvent.objects.filter(site__project=project).order_by("-sample_date").first()
-    if latest_se and latest_se.sample_date:
-        year = f"{latest_se.sample_date.year}. "
+    if hasattr(project, "latest_sample_date"):
+        # Annotated by ProjectViewSet, with the same ordering as below.
+        latest_sample_date = project.latest_sample_date
+    else:
+        latest_se = (
+            SampleEvent.objects.filter(site__project=project).order_by("-sample_date").first()
+        )
+        latest_sample_date = latest_se.sample_date if latest_se else None
+    if latest_sample_date:
+        year = f"{latest_sample_date.year}. "
     return f"{', '.join(admin_names)}. {year}{project.name}. MERMAID."
 
 

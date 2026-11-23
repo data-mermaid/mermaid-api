@@ -1,3 +1,9 @@
+import importlib
+import uuid
+
+import pytest
+from django.apps import apps
+
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations import (
     ERROR,
@@ -15,11 +21,13 @@ from api.submission.validations import (
 )
 
 
+def _get_result(validator_results, validator_name):
+    return next((r for r in validator_results if r["name"] == validator_name), None)
+
+
 def _get_result_status(validator_results, validator_name):
-    for result in validator_results:
-        if result["name"] == validator_name:
-            return result["status"]
-    return None
+    result = _get_result(validator_results, validator_name)
+    return result["status"] if result else None
 
 
 def _set_result_status(validator_results, validator_name, status):
@@ -102,6 +110,164 @@ def test_fishbelt_protocol_validation_warn(
         )
         == IGNORE
     )
+
+
+def _validate_fishbelt(collect_record, request):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(collect_record, belt_fish.belt_fish_validations, request=request)
+    collect_record.validations = runner.to_dict()
+    return runner
+
+
+@pytest.mark.parametrize(
+    "len_surveyed,expected_status,expected_code,expected_overall_status",
+    [
+        (105, IGNORE, "len_surveyed_out_of_range", WARN),
+        (50, OK, None, WARN),
+        (0, ERROR, "required", ERROR),
+        (1000, ERROR, "len_surveyed_out_of_range", ERROR),
+    ],
+)
+def test_ignored_warning_only_kept_for_same_warning(
+    invalid_collect_record_warn,
+    profile1_request,
+    belt_transect_width_condition2,
+    len_surveyed,
+    expected_status,
+    expected_code,
+    expected_overall_status,
+):
+    record = invalid_collect_record_warn
+    _validate_fishbelt(record, profile1_request)
+    len_surveyed_results = record.validations["results"]["data"]["fishbelt_transect"][
+        "len_surveyed"
+    ]
+    assert _get_result_status(len_surveyed_results, "len_surveyed_validator") == WARN
+    _set_result_status(len_surveyed_results, "len_surveyed_validator", IGNORE)
+
+    record.data["fishbelt_transect"]["len_surveyed"] = len_surveyed
+    runner = _validate_fishbelt(record, profile1_request)
+
+    result = _get_result(
+        runner.results["data"]["fishbelt_transect"]["len_surveyed"], "len_surveyed_validator"
+    )
+    assert result["status"] == expected_status
+    assert result["code"] == expected_code
+    assert runner.status == expected_overall_status
+
+
+def test_ignored_warning_not_kept_for_different_warning(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _validate_fishbelt(record, profile1_request)
+    record_results = record.validations["results"]["$record"]
+    assert _get_result(record_results, "observation_count_validator")["code"] == (
+        "too_few_observations"
+    )
+    _set_result_status(record_results, "observation_count_validator", IGNORE)
+
+    record.data["obs_belt_fishes"] = record.data["obs_belt_fishes"][:1] * 201
+    runner = _validate_fishbelt(record, profile1_request)
+
+    result = _get_result(runner.results["$record"], "observation_count_validator")
+    assert result["status"] == WARN
+    assert result["code"] == "too_many_observations"
+
+
+def test_ignored_list_warning_not_kept_for_error(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _validate_fishbelt(record, profile1_request)
+    obs_results = record.validations["results"]["data"]["obs_belt_fishes"]
+    assert _get_result_status(obs_results[2], "fish_size_validator") == WARN
+    _set_result_status(obs_results[2], "fish_size_validator", IGNORE)
+
+    record.data["obs_belt_fishes"][2]["size"] = 0
+    runner = _validate_fishbelt(record, profile1_request)
+
+    result = _get_result(runner.results["data"]["obs_belt_fishes"][2], "fish_size_validator")
+    assert result["status"] == ERROR
+    assert result["code"] == "invalid_fish_size"
+    assert runner.status == ERROR
+
+
+def _ignore_fish_size_warning(record, request, obs_index):
+    _validate_fishbelt(record, request)
+    obs_results = record.validations["results"]["data"]["obs_belt_fishes"]
+    assert _get_result_status(obs_results[obs_index], "fish_size_validator") == WARN
+    _set_result_status(obs_results[obs_index], "fish_size_validator", IGNORE)
+
+
+def _fish_size_statuses(runner):
+    return [
+        _get_result_status(row, "fish_size_validator")
+        for row in runner.results["data"]["obs_belt_fishes"]
+    ]
+
+
+def test_ignored_list_warning_follows_observation_when_row_deleted(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    del record.data["obs_belt_fishes"][0]
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [OK, IGNORE]
+
+
+def test_ignored_list_warning_follows_observation_when_rows_reordered(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    record.data["obs_belt_fishes"].reverse()
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [IGNORE, OK, OK]
+
+
+def test_ignored_list_warning_not_kept_for_other_observation_at_same_index(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    observations = record.data["obs_belt_fishes"]
+    observations[2] = dict(observations[2], id=str(uuid.uuid4()))
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [OK, OK, WARN]
+
+
+def test_ignored_list_warning_not_kept_for_row_without_id_at_same_index(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    observations = record.data["obs_belt_fishes"]
+    observations[2] = {k: v for k, v in observations[2].items() if k != "id"}
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [OK, OK, WARN]
+
+
+def test_ignored_list_warning_matched_by_position_without_observation_id(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    for obs in record.data["obs_belt_fishes"]:
+        obs.pop("id", None)
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [OK, OK, IGNORE]
 
 
 def test_fishbelt_protocol_validation_null_str_warn(
@@ -443,3 +609,99 @@ def test_family_observation_passes_validation(
         request=profile1_request,
     )
     assert overall_status == OK
+
+
+def test_management_warnings_similar_name_first(
+    management1, valid_benthic_lit_collect_record, benthic_lit_project, profile1_request
+):
+    # The webapp only offers the duplicate-MR merge when similar_name is the
+    # management field's first warning, so it must precede not_unique_management.
+    management1.pk = None
+    management1.name = management1.name.replace(" ", "-")
+    management1.save()
+    valid_benthic_lit_collect_record.data["sample_event"]["management"] = str(management1.pk)
+    valid_benthic_lit_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(
+        valid_benthic_lit_collect_record,
+        benthic_lit.benthic_lit_validations,
+        request=profile1_request,
+    )
+    mr_results = runner.to_dict()["results"]["data"]["sample_event"]["management"]
+    warning_codes = [r["code"] for r in mr_results if r["status"] == WARN]
+    assert warning_codes == ["similar_name", "not_unique_management"]
+
+
+@pytest.mark.parametrize(
+    "validations",
+    [
+        belt_fish.belt_fish_validations,
+        belt_invert.belt_invert_validations,
+        benthic_lit.benthic_lit_validations,
+        benthic_photo_quadrat_transect.bpqt_base_validations,
+        benthic_pit.benthic_pit_validations,
+        bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
+        habitat_complexity.habcomp_validations,
+    ],
+)
+def test_management_validators_similar_name_first(validations):
+    mr_validator_names = [
+        v.validator.name for v in validations if v.paths == ["data.sample_event.management"]
+    ]
+    assert mr_validator_names.index("similar_management_name_validator") < (
+        mr_validator_names.index("unique_management_validator")
+    )
+
+
+def test_similar_name_ignore_migrated_to_new_validator(
+    management1, valid_benthic_lit_collect_record, benthic_lit_project, profile1_request
+):
+    migration = importlib.import_module("api.migrations.0135_move_similar_name_ignores")
+    mr_validations = {
+        v.validator.name: v
+        for v in benthic_lit.benthic_lit_validations
+        if v.paths == ["data.sample_event.management"]
+    }
+    old_id = mr_validations[migration.OLD_NAME]._get_validation_id()
+    new_id = mr_validations[migration.NEW_NAME]._get_validation_id()
+    assert old_id == migration._validation_id(migration.OLD_NAME)
+    assert new_id == migration._validation_id(migration.NEW_NAME)
+
+    # Same site and similar name, with similar_name ignored before the validator split
+    management1.pk = None
+    management1.name = management1.name.replace(" ", "-")
+    management1.save()
+    record = valid_benthic_lit_collect_record
+    record.data["sample_event"]["management"] = str(management1.pk)
+    record.validations = {
+        "version": ValidationRunner.VERSION,
+        "status": OK,
+        "results": {
+            "data": {
+                "sample_event": {
+                    "management": [
+                        {
+                            "name": migration.OLD_NAME,
+                            "status": IGNORE,
+                            "code": "similar_name",
+                            "context": None,
+                            "validation_id": old_id,
+                            "fields": ["data.sample_event.management"],
+                        }
+                    ]
+                }
+            }
+        },
+    }
+    record.save()
+
+    migration.move_similar_name_ignores(apps, None)
+    record.refresh_from_db()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(record, benthic_lit.benthic_lit_validations, request=profile1_request)
+    mr_results = runner.to_dict()["results"]["data"]["sample_event"]["management"]
+    statuses = {r["code"]: r["status"] for r in mr_results if r["code"]}
+    assert statuses["similar_name"] == IGNORE
+    assert statuses["not_unique_management"] == WARN

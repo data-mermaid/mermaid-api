@@ -6,11 +6,26 @@ import botocore
 from django.conf import settings
 
 
+def resolve_credentials(aws_access_key_id=None, aws_secret_access_key=None):
+    """Return the (access_key, secret_key) pair get_client would use, filling in defaults."""
+    return (
+        aws_access_key_id or settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key or settings.AWS_SECRET_ACCESS_KEY,
+    )
+
+
+def same_credentials(source_config, dest_config):
+    """True when two storage configs resolve to the same AWS credentials, so one client
+    can reach both buckets and a server-side copy is possible."""
+    return resolve_credentials(
+        source_config.get("access_key"), source_config.get("secret_key")
+    ) == resolve_credentials(dest_config.get("access_key"), dest_config.get("secret_key"))
+
+
 def get_client(aws_access_key_id=None, aws_secret_access_key=None):
-    if aws_access_key_id is None:
-        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
-    if aws_secret_access_key is None:
-        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+    aws_access_key_id, aws_secret_access_key = resolve_credentials(
+        aws_access_key_id, aws_secret_access_key
+    )
 
     session = boto3.session.Session(
         aws_access_key_id=aws_access_key_id,
@@ -51,6 +66,39 @@ def delete_file(bucket, blob_name, aws_access_key_id=None, aws_secret_access_key
         if e.response["Error"]["Code"] == "NoSuchKey":
             return False
         raise
+
+
+# delete_objects accepts at most 1000 keys per request.
+DELETE_OBJECTS_MAX_KEYS = 1000
+
+
+def delete_files(
+    bucket, blob_names, aws_access_key_id=None, aws_secret_access_key=None, client=None
+):
+    """Delete blob_names from bucket in batches of up to 1000 keys per request.
+    Missing keys are not errors. Returns per-key error dicts ({"Key", "Message"}); a batch
+    whose request fails reports each of its keys and later batches are still attempted."""
+    blob_names = list(blob_names)
+    if not blob_names:
+        return []
+    if client is None:
+        client = get_client(
+            aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
+        )
+
+    errors = []
+    for i in range(0, len(blob_names), DELETE_OBJECTS_MAX_KEYS):
+        batch = blob_names[i : i + DELETE_OBJECTS_MAX_KEYS]
+        try:
+            response = client.delete_objects(
+                Bucket=bucket,
+                Delete={"Objects": [{"Key": key} for key in batch], "Quiet": True},
+            )
+        except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
+            errors.extend({"Key": key, "Message": str(e)} for key in batch)
+            continue
+        errors.extend(response.get("Errors", []))
+    return errors
 
 
 def upload_file(
@@ -198,14 +246,19 @@ def move_file_cross_account(
     dest_access_key,
     dest_secret_key,
     delete_source=True,
+    source_client=None,
+    dest_client=None,
 ):
-    """Move a file between buckets that may require different AWS credentials."""
-    source_client = get_client(
-        aws_access_key_id=source_access_key, aws_secret_access_key=source_secret_key
-    )
-    dest_client = get_client(
-        aws_access_key_id=dest_access_key, aws_secret_access_key=dest_secret_key
-    )
+    """Move a file between buckets that may require different AWS credentials.
+    Pass pre-created clients to avoid repeated session instantiation."""
+    if source_client is None:
+        source_client = get_client(
+            aws_access_key_id=source_access_key, aws_secret_access_key=source_secret_key
+        )
+    if dest_client is None:
+        dest_client = get_client(
+            aws_access_key_id=dest_access_key, aws_secret_access_key=dest_secret_key
+        )
 
     response = source_client.get_object(Bucket=source_bucket, Key=source_key)
     body = response["Body"].read()

@@ -1,10 +1,15 @@
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from api.models import (
     AuditRecord,
+    AuthUser,
     BeltFish,
     BeltInvert,
     CollectRecord,
+    Observer,
+    Profile,
     ProjectProfile,
     Revision,
 )
@@ -33,6 +38,62 @@ def test_sampleunitmethods_list_includes_macroinvertebrate(
     assert result["site_name"] is not None
     assert result["size"]["width"] is not None
     assert result["size"]["len_surveyed"] is not None
+
+
+def test_sampleunitmethods_search_and_size_cover_pqt_and_macroinvertebrate(
+    db_setup,
+    api_client1,
+    project1,
+    profile1,
+    belt_invert1,
+    benthic_photo_quadrat_transect1,
+    observer_benthic_photo_quadrat_transect1,
+):
+    # belt_invert1 already has an observer (profile1)
+    url = reverse("sampleunitmethod-list", kwargs={"project_pk": str(project1.pk)})
+    protocols = "benthicpqt,macroinvertebrate"
+
+    response = api_client1.get(url, {"protocol": protocols, "search": profile1.first_name})
+    assert response.status_code == 200
+    results = {r["protocol"]: r for r in response.json()["results"]}
+    assert set(results) == {"benthicpqt", "macroinvertebrate"}
+    assert results["benthicpqt"]["size"] == {
+        "len_surveyed": benthic_photo_quadrat_transect1.quadrat_transect.len_surveyed,
+        "len_surveyed_units": "m",
+    }
+
+    response = api_client1.get(url, {"protocol": protocols, "search": "no-such-observer"})
+    assert response.json()["count"] == 0
+
+
+def test_sampleunitmethods_query_count_independent_of_unnamed_observer_rows(
+    db_setup,
+    api_client1,
+    project1,
+    belt_fish1,
+    benthic_photo_quadrat_transect1,
+    belt_invert1,
+    django_assert_max_num_queries,
+):
+    url = reverse("sampleunitmethod-list", kwargs={"project_pk": str(project1.pk)})
+    params = {"protocol": "fishbelt,benthicpqt,macroinvertebrate"}
+    email = "unnamedobserver@mermaidcollect.org"
+    profile = Profile.objects.create(email=email)
+    AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
+
+    Observer.objects.create(transectmethod=belt_fish1, profile=profile)
+    with CaptureQueriesContext(connection) as ctx:
+        assert api_client1.get(url, params).status_code == 200
+    num_queries_1x = len(ctx.captured_queries)
+
+    for tm in (benthic_photo_quadrat_transect1, belt_invert1):
+        Observer.objects.create(transectmethod=tm, profile=profile)
+    with django_assert_max_num_queries(num_queries_1x):
+        response = api_client1.get(url, params)
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 3
+    assert all("unnamedobserver" in r["observers"] for r in results)
 
 
 def test_update_belt_invert_transect_method(db_setup, api_client1, project1, belt_invert1_with_obs):

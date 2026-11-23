@@ -82,6 +82,23 @@ jobs:
           echo "SQS did not become ready"
           exit 1
 
+      - name: Tune Postgres for tests
+        # Test data is disposable: skip crash-safety work on every commit.
+        # max_locks_per_transaction: each pytest-xdist worker creates a full test
+        # schema at once, which overflows the default lock table. It needs a restart.
+        run: |
+          pg=${{ job.services.postgres.id }}
+          for setting in "fsync = off" "synchronous_commit = off" "full_page_writes = off" "max_locks_per_transaction = 1024"; do
+            docker exec "$pg" psql -U postgres -c "ALTER SYSTEM SET $setting"
+          done
+          docker restart "$pg"
+          for i in $(seq 1 30); do
+            docker exec "$pg" pg_isready -U postgres && exit 0
+            sleep 1
+          done
+          echo "Postgres did not come back after restart"
+          exit 1
+
       - name: Setup Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
@@ -99,12 +116,12 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
       - name: Install Python dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run tests
         working-directory: src
@@ -112,7 +129,7 @@ jobs:
         #   term-missing → uncovered lines printed in this job's log (human-readable)
         #   html         → browsable report, uploaded as an artifact below
         #   xml          → machine-readable, for coverage tooling (Codecov, etc.)
-        run: pytest --no-migrations --cov --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-fail-under=80 -q api/tests
+        run: pytest -n auto --durations=25 --no-migrations --cov --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-fail-under=80 -q api/tests
 
       - name: Upload coverage report
         if: always()

@@ -2,6 +2,7 @@ import re
 import uuid
 
 from api.models import AuthUser, Project
+from api.reports.formatters import MULTI_VALUE_SEPARATOR
 
 SUMMARY_URL_SUFFIXES = (
     "/beltfishes/obstransectbeltfishes/",
@@ -34,7 +35,7 @@ SUBMIT_EVENT_TYPE = "submit"
 OTHER_EVENT_TYPE = "other"
 EVENT_TYPES_FILTER = (SUMMARY_EVENT_TYPE, PROJECT_EVENT_TYPE, SUBMIT_EVENT_TYPE)
 PROFILE_DEFAULT = {"first_name": "", "last_name": "", "email": ""}
-PROJECT_DEFAULT = {"project_name": "", "project_tags": "", "profiles": {}}
+PROJECT_DEFAULT = {"project_name": "", "project_tags": "", "project_tag_ids": "", "profiles": {}}
 
 
 def meta(method):
@@ -110,18 +111,22 @@ def get_project_lookup(log_events):
         for log_event in log_events
         if hasattr(log_event, "meta") is not False and log_event.meta.get("project_id") is not None
     }
-    return {
-        str(p.id): {
+    projects = {}
+    for p in Project.objects.prefetch_related("profiles", "tags", "sites").filter(
+        id__in=project_lookup.keys()
+    ):
+        tags = list(p.tags.all())
+        projects[str(p.id)] = {
             "project_name": p.name,
             "project_status": p.get_status_display(),
-            "project_tags": ",".join(t.name for t in p.tags.all()),
-            "countries": ",".join(set([s.country.name for s in p.sites.order_by("country__name")])),
+            "project_tags": MULTI_VALUE_SEPARATOR.join(t.name for t in tags),
+            "project_tag_ids": MULTI_VALUE_SEPARATOR.join(str(t.id) for t in tags),
+            "countries": MULTI_VALUE_SEPARATOR.join(
+                sorted(set(s.country.name for s in p.sites.all()))
+            ),
             "profiles": {str(pp.profile.id): pp.get_role_display() for pp in p.profiles.all()},
         }
-        for p in Project.objects.prefetch_related("profiles", "tags", "sites").filter(
-            id__in=project_lookup.keys()
-        )
-    }
+    return projects
 
 
 @meta

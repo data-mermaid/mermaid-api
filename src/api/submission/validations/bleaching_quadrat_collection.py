@@ -25,6 +25,7 @@ from .validators import (
     SampleDateValidator,
     SampleTimeValidator,
     SimilarDateSampleUnitsValidator,
+    SimilarManagementNameValidator,
     UniqueManagementValidator,
     UniqueQuadratCollectionValidator,
     UniqueSiteValidator,
@@ -116,6 +117,16 @@ bleaching_quadrat_collection_validations = [
             site_path="data.sample_event.site",
         ),
         paths=["data.sample_event.site"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    # Before UniqueManagementValidator: the webapp offers the duplicate-MR merge
+    # only when similar_name is the field's first warning.
+    Validation(
+        validator=SimilarManagementNameValidator(
+            management_path="data.sample_event.management",
+        ),
+        paths=["data.sample_event.management"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),

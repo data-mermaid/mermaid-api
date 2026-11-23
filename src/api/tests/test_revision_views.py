@@ -209,3 +209,15 @@ def test_push_view_wrong_permission(db_setup, api_client1, serialized_tracked_pr
     response_data = request.json()
 
     assert response_data["projects"][0]["status_code"] == 403
+
+
+def test_push_view_malformed_id(db_setup, serialized_tracked_collect_record, api_client1):
+    col_rec = serialized_tracked_collect_record["updates"][0]
+    col_rec["id"] = "not-a-uuid"
+
+    # update (has _last_revision_num) and delete paths both look the id up before writing
+    for deleted in (False, True):
+        col_rec["_deleted"] = deleted
+        request = api_client1.post("/v1/push/", {"collect_records": [col_rec]}, format="json")
+        response_data = request.json()
+        assert response_data["collect_records"][0]["status_code"] == 400

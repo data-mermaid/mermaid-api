@@ -135,6 +135,48 @@ def test_retryable_classification_failure_omits_the_processing_error_marker(
     assert "[classify.processing_error]" not in caplog.text
 
 
+@override_settings(**PINNED)
+def test_skips_the_lambda_when_the_image_is_deleted_before_running(
+    monkeypatch, image, classifier_v2
+):
+    """The job loads the image, then the user deletes it before the RUNNING write."""
+    get_or_none = Image.objects.get_or_none
+
+    def get_then_delete(**kwargs):
+        found = get_or_none(**kwargs)
+        Image.objects.filter(pk=found.pk).delete()
+        return found
+
+    def fail_if_called(image, points):
+        raise AssertionError("Lambda invoked for a deleted image")
+
+    monkeypatch.setattr(Image.objects, "get_or_none", get_then_delete)
+    monkeypatch.setattr(classification, "classify_via_lambda", fail_if_called)
+
+    _classify_image(image.pk)
+
+
+@pytest.mark.parametrize("retryable", [False, True])
+@override_settings(**PINNED)
+def test_deleted_mid_invoke_is_not_a_processing_error(
+    monkeypatch, image, classifier_v2, caplog, retryable
+):
+    def delete_then_fail(image, points):
+        Image.objects.filter(pk=image.pk).delete()
+        raise InferenceError("image not found", retryable=retryable)
+
+    monkeypatch.setattr(classification, "classify_via_lambda", delete_then_fail)
+
+    classification.logger.addHandler(caplog.handler)
+    try:
+        _classify_image(image.pk)
+    finally:
+        classification.logger.removeHandler(caplog.handler)
+
+    assert "[classify.processing_error]" not in caplog.text
+    assert "was deleted during classification" in caplog.text
+
+
 @pytest.mark.parametrize(
     "num_points, expected",
     [

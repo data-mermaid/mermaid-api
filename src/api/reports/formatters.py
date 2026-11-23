@@ -1,6 +1,8 @@
 from api.models import Project
 
 DATA_POLICIES = dict(Project.DATA_POLICIES)
+# Separator for multi-value fields in tabular exports; values (e.g. tag names) may contain commas
+MULTI_VALUE_SEPARATOR = "; "
 
 
 def handle_none(default_val=None):
@@ -53,18 +55,18 @@ def to_day(value, field, row, serializer_instance):
 
 @handle_none()
 def to_join_list(value, field, row, serializer_instance):
-    return ", ".join(value)
+    return MULTI_VALUE_SEPARATOR.join(value)
 
 
 @handle_none()
 def to_governance(value, field, row, serializer_instance):
-    return ", ".join(value)
+    return MULTI_VALUE_SEPARATOR.join(value)
 
 
 @handle_none()
 def to_names(value, field, row, serializer_instance):
     vals = [v["name"] for v in value]
-    return ", ".join(vals)
+    return MULTI_VALUE_SEPARATOR.join(vals)
 
 
 @handle_none()
@@ -134,22 +136,6 @@ def to_percent_cover(value, field, row, serializer_instance):
         f"Average quadrat count: {quadrat_count_avg}, Average hard coral %: {percent_hard_avg_avg}, "
         f"Average soft coral %: {percent_soft_avg_avg}, Average macroalgae %: {percent_algae_avg_avg}"
     )
-
-
-def to_covariate(value, field, row, serializer_instance):
-    if not value:
-        return ""
-
-    for covariate in value:
-        if covariate["name"] != field.alias:
-            continue
-        values = covariate["value"]
-        if not isinstance(values, list):
-            return values
-        sorted(values, key=lambda x: (x["area"]), reverse=True)
-        return values[0]["name"] if values else ""
-
-    return ""
 
 
 def to_yesno(value, field, row, serializer_instance):

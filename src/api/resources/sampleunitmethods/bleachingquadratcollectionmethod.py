@@ -40,7 +40,7 @@ from ..base import (
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
 )
-from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
+from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
@@ -105,9 +105,7 @@ class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSeria
         exclude = []
 
 
-class BleachingQuadratCollectionMethodView(
-    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
-):
+class BleachingQuadratCollectionMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = BleachingQuadratCollection.objects.select_related(
         "quadrat", "quadrat__sample_event"
     ).all()
@@ -326,7 +324,6 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -336,6 +333,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
+        ReportField("site_id"),
     ]
 
 
@@ -410,7 +408,6 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -420,6 +417,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
+        ReportField("site_id"),
     ]
 
 
@@ -520,7 +518,6 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -529,6 +526,7 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
+        ReportField("site_id"),
     ]
 
 
@@ -651,7 +649,6 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -660,6 +657,7 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
+        ReportField("site_id"),
     ]
 
 

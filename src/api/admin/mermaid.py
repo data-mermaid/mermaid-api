@@ -15,7 +15,6 @@ from ..models import (
     AuditRecord,
     CollectRecord,
     Country,
-    Covariate,
     Current,
     Management,
     ManagementCompliance,
@@ -37,9 +36,10 @@ from ..models import (
     Tide,
     Visibility,
 )
+from ..reports.formatters import MULTI_VALUE_SEPARATOR
 from ..utils.notification import add_notification
 from ..utils.project import delete_project
-from .base import BaseAdmin
+from .base import BaseAdmin, is_autocomplete_request
 
 
 @admin.register(Project)
@@ -72,17 +72,19 @@ class ProjectAdmin(BaseAdmin):
     list_filter = ("status", "tags")
 
     def admin_list(self, obj):
-        return ", ".join(f"{p.profile.full_name} <{p.profile.email}>" for p in obj.admin_profiles)
+        return MULTI_VALUE_SEPARATOR.join(
+            f"{p.profile.full_name} <{p.profile.email}>" for p in obj.admin_profiles
+        )
 
     def country_list(self, obj):
         countries = []
         for s in obj.admin_sites:
             if s.country not in countries:
                 countries.append(s.country)
-        return ", ".join([c.name for c in countries])
+        return MULTI_VALUE_SEPARATOR.join([c.name for c in countries])
 
     def tag_list(self, obj):
-        return ", ".join(f"{t.name}" for t in obj.tags.all())
+        return MULTI_VALUE_SEPARATOR.join(f"{t.name}" for t in obj.tags.all())
 
     tag_list.short_description = _("organizations")
 
@@ -125,27 +127,25 @@ class ProjectAdmin(BaseAdmin):
         )
 
     def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("created_by", "updated_by")
-            .prefetch_related(
-                Prefetch(
-                    "profiles",
-                    queryset=ProjectProfile.objects.filter(
-                        role=ProjectProfile.ADMIN
-                    ).select_related("profile"),
-                    to_attr="admin_profiles",
+        qs = super().get_queryset(request)
+        if is_autocomplete_request(request):
+            return qs
+        return qs.select_related("created_by", "updated_by").prefetch_related(
+            Prefetch(
+                "profiles",
+                queryset=ProjectProfile.objects.filter(role=ProjectProfile.ADMIN).select_related(
+                    "profile"
                 ),
-                Prefetch(
-                    "sites",
-                    queryset=Site.objects.select_related("country").only(
-                        "id", "project_id", "country__id", "country__name"
-                    ),
-                    to_attr="admin_sites",
+                to_attr="admin_profiles",
+            ),
+            Prefetch(
+                "sites",
+                queryset=Site.objects.select_related("country").only(
+                    "id", "project_id", "country__id", "country__name"
                 ),
-                "tags",
-            )
+                to_attr="admin_sites",
+            ),
+            "tags",
         )
 
     def get_deleted_objects(self, objs, request):
@@ -157,7 +157,7 @@ class ProjectAdmin(BaseAdmin):
         # perms_needed/model_count reflect cascaded models (Site, Management,
         # ProjectProfile, ...) instead of just Project, then drop its nested
         # tree and protected list: for a real project the tree can run to
-        # hundreds/thousands of formatted rows (e.g. one per Site/Covariate),
+        # hundreds/thousands of formatted rows (e.g. one per Site),
         # and the protected list is exactly what we're bypassing.
         #
         # Caveat: PROTECTed models (SampleEvent.site/.management) still stop
@@ -205,6 +205,7 @@ class ProjectProfileAdmin(BaseAdmin):
         "profile__id",
     ]
     list_filter = ("role",)
+    autocomplete_fields = ("project", "profile")
 
     def has_delete_permission(self, request, obj=None):
         # Mirrors sync push.py's admin-demotion guard. Unlocked - just decides
@@ -321,6 +322,7 @@ class ManagementAdmin(BaseAdmin):
         "no_take",
     )
     readonly_fields = ("area",)
+    autocomplete_fields = ("project", "predecessor")
     search_fields = ["name", "name_secondary", "project__name", "est_year"]
 
     def delete_view(self, request, object_id, extra_context=None):
@@ -398,11 +400,13 @@ class SampleEventAdmin(BaseAdmin):
     list_display = ("site", "management", "sample_date")
     list_display_links = ("site", "sample_date")
     search_fields = ["site__name", "sample_date"]
+    autocomplete_fields = ("site", "management")
 
 
 @admin.register(Observer)
 class ObserverAdmin(BaseAdmin):
     list_display = ("profile", "transectmethod")
+    autocomplete_fields = ("profile",)
     search_fields = [
         "id",
         "profile__first_name",
@@ -427,6 +431,7 @@ class ProtocolFilter(admin.SimpleListFilter):
 @admin.register(CollectRecord)
 class CollectRecordAdmin(BaseAdmin):
     list_display = ("id", "protocol", "profile", "created_by")
+    autocomplete_fields = ("project", "profile")
     search_fields = [
         "id",
         "project__id",
@@ -493,19 +498,16 @@ class TagAdmin(BaseAdmin):
         return super().delete_view(request, object_id, extra_context)
 
 
-@admin.register(Covariate)
-class CovariateAdmin(BaseAdmin):
-    pass
-
-
 @admin.register(AuditRecord)
 class AuditRecordAdmin(BaseAdmin):
     list_display = ("event_on", "event_type", "model", "record_id")
+    autocomplete_fields = ("event_by",)
 
 
 @admin.register(Notification)
 class NotificationAdmin(BaseAdmin):
     list_display = ("owner", "status", "title", "created_on")
+    autocomplete_fields = ("owner",)
     search_fields = ["owner__first_name", "owner__last_name", "owner__pk", "title", "status"]
 
     def get_urls(self):

@@ -19,7 +19,12 @@ PROD_SETTINGS = ProjectSettings(
         # 3000 MiB spiked to the cap daily (heavy obs/report serialization),
         # OOM-killing gunicorn workers. Headroom above the ~3078 MiB peak.
         container_memory=4096,
-        container_count=1,
+        # Was 1. The 2026-10-13 p95 incident that prompted this turned out to be RDS
+        # gp2 IOPS exhaustion (see storage_type=GP3 in common.py), not API thread
+        # exhaustion -- p50 stayed flat throughout, so this isn't a latency fix.
+        # Kept anyway as HA insurance: 1 task means any replacement is a full outage
+        # until it's healthy. ~$55/mo (no room in the existing fleet for a 2nd task).
+        container_count=2,
         # SQS
         sqs_cpu=2048,
         sqs_memory=4096,

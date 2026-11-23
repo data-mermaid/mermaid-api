@@ -1,7 +1,39 @@
+from contextlib import contextmanager
+from contextvars import ContextVar
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.fields.related import ForeignKey
 
 from api import models
+
+_deferred_projects: ContextVar[dict | None] = ContextVar("deferred_projects", default=None)
+
+
+@contextmanager
+def defer_project_updated_on():
+    """
+    Save each project once on exit in place of once per record, for the
+    update_project_updated_on signal (api/signals/revision.py), while saving
+    many related records, e.g. the sample event, sample unit, observers and
+    observations of a collect record. Nothing is saved if the block raises.
+    """
+    projects = {}
+    token = _deferred_projects.set(projects)
+    try:
+        yield
+    finally:
+        _deferred_projects.reset(token)
+    for project in projects.values():
+        project.save()
+
+
+def defer_project_save(project):
+    """Queue `project` for saving on exit, if inside defer_project_updated_on."""
+    projects = _deferred_projects.get()
+    if projects is None:
+        return False
+    projects.setdefault(project.pk, project)
+    return True
 
 
 def get_model_value(model, lookups):

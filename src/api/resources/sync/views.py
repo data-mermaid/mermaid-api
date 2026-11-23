@@ -1,7 +1,9 @@
+from opentelemetry import trace as otel_trace
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import (
     NotAuthenticated,
     NotFound,
+    ParseError,
     PermissionDenied,
     ValidationError,
 )
@@ -24,7 +26,7 @@ from api.resources import (
     psite,
 )
 from api.resources.invert_attribute import InvertSpeciesViewSet
-from ...exceptions import ReadOnlyError
+from ...exceptions import ReadOnlyError, check_uuid
 from .pull import get_record, get_serialized_records, serialize_revisions
 from .push import apply_changes, get_request_method
 from .utils import create_view_request
@@ -32,6 +34,8 @@ from .utils import create_view_request
 NO_FILTERS = ()
 PROJECT_FILTERS = ("project",)
 PROJECT_PROFILE_FILTERS = ("project", "profile")
+
+tracer = otel_trace.get_tracer("api.sync")
 
 COLLECT_RECORDS_SOURCE_TYPE = "collect_records"
 PROJECT_SITES_SOURCE_TYPE = "project_sites"
@@ -46,16 +50,6 @@ FISH_SPECIES_SOURCE_TYPE = "fish_species"
 INVERT_ATTRIBUTES_SOURCE_TYPE = "invert_attributes"
 INVERT_SPECIES_SOURCE_TYPE = "invert_species"
 CHOICES_SOURCE_TYPE = "choices"
-
-CACHEABLE_SOURCE_TYPES = (
-    BENTHIC_ATTRIBUTES_SOURCE_TYPE,
-    FISH_FAMILIES_SOURCE_TYPE,
-    FISH_GENERA_SOURCE_TYPE,
-    FISH_GROUPINGS_SOURCE_TYPE,
-    FISH_SPECIES_SOURCE_TYPE,
-    INVERT_ATTRIBUTES_SOURCE_TYPE,
-    INVERT_SPECIES_SOURCE_TYPE,
-)
 
 project_sources = {
     COLLECT_RECORDS_SOURCE_TYPE: {
@@ -168,13 +162,21 @@ def _get_profile_id(request):
 
 
 def _get_required_parameters(request, data, required_filters):
-    params = {"revision_num": data.get("last_revision")}
+    last_revision = data.get("last_revision")
+    if last_revision is not None:
+        try:
+            last_revision = int(last_revision)
+        except (TypeError, ValueError):
+            raise ValueError("last_revision must be an integer")
+    params = {"revision_num": last_revision}
 
     if "project" in required_filters:
         project = data.get("project")
         if project is None:
             raise ValueError("Project is missing")
-        params["project"] = project
+        # pull.py builds raw SQL from this value (revision.project_id = '{..}'::uuid);
+        # validate here, at the boundary, rather than trust client input into that string.
+        params["project"] = check_uuid(project)
 
     if "profile" in required_filters:
         profile_id = _get_profile_id(request)
@@ -273,6 +275,11 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     if record_id is None:
         return _error(400, ValidationError(), data={"id": "This field may not be null."})
 
+    try:
+        check_uuid(record_id)
+    except ParseError as err:
+        return _error(400, err)
+
     if src["read_only"] is True:
         return _error(405, ReadOnlyError(f"{source_type} is read-only"))
 
@@ -317,6 +324,18 @@ def _update_source_records(source_type, records, request, force=False):
 
 
 def _get_source_records(source_type, source_data, request):
+    # One span per source, so a slow pull shows which source it spent its time on.
+    with tracer.start_as_current_span(f"pull.{source_type}") as span:
+        records = _fetch_source_records(source_type, source_data, request)
+        attributes = {"mermaid_source": source_type}
+        if source_type != CHOICES_SOURCE_TYPE:
+            attributes["mermaid_row_count"] = len(records["updates"])
+            attributes["mermaid_full_pull"] = source_data.get("last_revision") is None
+        span.set_attributes({**attributes, "aws.xray.annotations": list(attributes)})
+        return records
+
+
+def _fetch_source_records(source_type, source_data, request):
     if source_type == CHOICES_SOURCE_TYPE:
         return _get_choices()
 

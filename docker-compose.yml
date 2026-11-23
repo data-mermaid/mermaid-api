@@ -13,6 +13,9 @@ services:
     container_name: api_db
     image: postgis/postgis:16-3.5-alpine
     platform: linux/amd64
+    # Parallel tests (pytest-xdist) create one full test schema per worker at
+    # once; the default lock table (64 per connection) runs out of shared memory.
+    command: postgres -c max_locks_per_transaction=1024
     volumes:
       - pg_data:/var/lib/postgresql/data
     environment:
@@ -33,6 +36,7 @@ services:
     build:
         context: .
         dockerfile: Dockerfile
+        target: dev
     image: wcs/mermaid-api:latest
     volumes:
       - $PWD/src:/var/projects/webapp

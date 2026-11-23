@@ -20,14 +20,11 @@ natsort==8.4.0
 openpyxl==3.1.5
 pandas==3.0.3
 Pillow==12.3.0
-psycopg==3.3.4
+psycopg[c]==3.3.4
 pyarrow==25.0.0
 pydantic>=2.7,<3
 pyexcelerate==0.13.0
 PyYAML==6.0.3
-pytest-cov==7.1.0
-pytest-django==4.12.0
-pytest==9.1.1
 python-jose==3.5.0
 requests==2.34.2
 sentry-sdk[django]==2.66.0
