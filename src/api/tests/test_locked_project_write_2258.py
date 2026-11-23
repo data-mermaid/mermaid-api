@@ -73,3 +73,54 @@ def test_admin_cannot_find_and_replace_sites_on_locked_project(
         url, {"find": [str(project1.pk)], "replace": str(project1.pk)}, format="json"
     )
     assert response.status_code == 403
+
+
+# ProjectDataAdminPermission itself must refuse writes on a LOCKED project. Before, it
+# only checked the admin role, so admin DELETE and the sample-unit /edit/ action wrote
+# to a locked project.
+
+
+def _lock(project):
+    project.status = Project.LOCKED
+    project.save()
+
+
+def test_admin_cannot_delete_sample_unit_on_locked_project(
+    db_setup, api_client1, project1, project_profile1, belt_fish1, belt_fish_project
+):
+    from api.models import BeltFish
+
+    _lock(project1)
+    url = reverse(
+        "beltfishtransectmethod-detail",
+        kwargs={"project_pk": str(project1.pk), "pk": str(belt_fish1.pk)},
+    )
+    response = api_client1.delete(url)
+    assert response.status_code == 403
+    assert BeltFish.objects.filter(pk=belt_fish1.pk).exists()
+
+
+def test_admin_cannot_edit_sample_unit_on_locked_project(
+    db_setup, api_client1, project1, project_profile1, belt_fish1, belt_fish_project
+):
+    from api.models import BeltFish
+
+    _lock(project1)
+    url = reverse(
+        "beltfishtransectmethod-edit",
+        kwargs={"project_pk": str(project1.pk), "pk": str(belt_fish1.pk)},
+    )
+    response = api_client1.put(url, {}, format="json")
+    assert response.status_code == 403
+    assert BeltFish.objects.filter(pk=belt_fish1.pk).exists()
+
+
+def test_admin_can_still_read_sample_unit_on_locked_project(
+    db_setup, api_client1, project1, project_profile1, belt_fish1, belt_fish_project
+):
+    _lock(project1)
+    url = reverse(
+        "beltfishtransectmethod-detail",
+        kwargs={"project_pk": str(project1.pk), "pk": str(belt_fish1.pk)},
+    )
+    assert api_client1.get(url).status_code == 200

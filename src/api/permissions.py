@@ -244,6 +244,9 @@ class ProjectDataAdminPermission(permissions.BasePermission):
         pp = get_project_profile(project, user.profile, request=request)
         if pp is None:
             return False
+        # A LOCKED project takes no writes, even from admins (card 2258).
+        if not project.is_open and request.method not in permissions.SAFE_METHODS:
+            return False
         return pp.is_admin
 
 
