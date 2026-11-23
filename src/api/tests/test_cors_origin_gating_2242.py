@@ -12,9 +12,9 @@ from django.conf import settings
 from app.settings import ENVIRONMENT
 
 
-def test_cors_allow_all_is_off_on_deployed_environments():
-    # allow-all must follow the environment: True only outside dev/prod.
-    expected = ENVIRONMENT not in ("dev", "prod")
+def test_cors_allow_all_is_fail_closed():
+    # Fail closed: allow-all only for an explicitly local environment.
+    expected = ENVIRONMENT == "local"
     assert settings.CORS_ALLOW_ALL_ORIGINS is expected
 
 

@@ -94,10 +94,11 @@ TESTING = False
 DEBUG_LEVEL = "WARNING"
 CONN_MAX_AGE = 0
 # Credentials are allowed, so a reflected arbitrary Origin would let any site make
-# cookie-carrying requests and read the responses (card 2242). On deployed
-# environments use an explicit allow-list from CORS_ALLOWED_ORIGINS; keep allow-all
-# only for local development.
-CORS_ALLOW_ALL_ORIGINS = ENVIRONMENT not in ("dev", "prod")
+# cookie-carrying requests and read the responses (card 2242). Fail closed: allow-all
+# only for an explicitly local environment; every other value (dev, prod, staging, a
+# typo, unset) uses the explicit CORS_ALLOWED_ORIGINS allow-list. ENVIRONMENT is
+# already normalized to lower case above.
+CORS_ALLOW_ALL_ORIGINS = ENVIRONMENT == "local"
 _cors_allowed_origins = os.environ.get("CORS_ALLOWED_ORIGINS") or ""
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_allowed_origins.split(",") if o.strip()]
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
