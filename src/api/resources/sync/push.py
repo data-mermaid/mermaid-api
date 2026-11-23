@@ -13,6 +13,33 @@ from ...utils.q import submit_job
 from .utils import create_view_request
 
 
+def _authorized_project_id(record, model_class, record_id):
+    """The project the push was authorized against (its claimed `project`, or the
+    record id itself for a Project). Used to confirm the record being written
+    actually belongs to that project (sync BOLA, card 2257)."""
+    if model_class == Project:
+        return str(record_id) if record_id is not None else None
+    proj = record.get("project")
+    return str(proj) if proj is not None else None
+
+
+def _instance_project_id(instance):
+    if isinstance(instance, Project):
+        return str(instance.pk)
+    pid = getattr(instance, "project_id", None)
+    return str(pid) if pid is not None else None
+
+
+def _wrong_project(instance, record, model_class, record_id):
+    """True when `instance` belongs to a different project than the one the push
+    was authorized against - a cross-tenant write by record id."""
+    authorized = _authorized_project_id(record, model_class, record_id)
+    if authorized is None:
+        return False
+    inst_proj = _instance_project_id(instance)
+    return inst_proj is not None and inst_proj != authorized
+
+
 def get_request_method(record):
     """Determine the request method based on the record's edits.
 
@@ -85,6 +112,11 @@ def apply_changes(request, serializer, record, force=False):
         try:
             instance = model_class.objects.get(pk=record_id)
 
+            # The permission check authorized a project; refuse to act on a record
+            # that belongs to a different one (cross-tenant delete by id, card 2257).
+            if _wrong_project(instance, record, model_class, record_id):
+                return 403, "Forbidden", "Record belongs to a different project"
+
             # If deleting a project, deliberately delete all protected objects!
             if model_class == Project:
                 submit_job(0, True, delete_project, record_id)
@@ -140,6 +172,12 @@ def apply_changes(request, serializer, record, force=False):
                 "Does Not Exist",
                 f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist",
             )
+
+        # Refuse to update a record that belongs to a different project than the one
+        # the push was authorized against, and refuse to move it to another project
+        # (card 2257). To pass, record["project"] must equal the instance's project.
+        if _wrong_project(instance, record, model_class, record_id):
+            return 403, "Forbidden", "Record belongs to a different project"
 
         status_code = 200
     else:

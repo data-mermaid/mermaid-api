@@ -264,7 +264,12 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     vw_request.query_params["show_hidden"] = "true"
 
     record_id = record.get("id")
-    permission_checks = check_permissions(vw_request, {source_type: record}, [source_type])
+    # Pass the record's real method so method-specific guards fire (e.g. a COLLECTOR
+    # may not DELETE project-level records). Before, the check ran with method=False
+    # and those guards never triggered (card 2257, M2).
+    permission_checks = check_permissions(
+        vw_request, {source_type: record}, [source_type], method=get_request_method(record)
+    )
 
     code = permission_checks[source_type]["code"]
     data = permission_checks[source_type]["data"]
@@ -372,6 +377,15 @@ def check_permissions(request, data, source_types, method=False):
         except ValueError:
             permission_checks[source_type] = {"data": proj, "code": 403}
             continue
+
+        # For a collect-record update/delete, pass the record id so CollectRecordOwner
+        # runs. Without it the check carried no id and that permission returned True
+        # unconditionally, letting any member edit/delete another member's collect
+        # record (and a READONLY member write at all) (card 2257, H8).
+        if source_type == COLLECT_RECORDS_SOURCE_TYPE and method in ("PUT", "DELETE"):
+            record_id = data[source_type].get("id")
+            if record_id is not None:
+                params["collect_record_id"] = record_id
 
         view_request = create_view_request(request, method=method, data=params)
 
