@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from django.http import FileResponse
 from rest_framework import serializers
@@ -111,7 +112,6 @@ class MultiProjectReportView(APIView):
 
                 return response
             finally:
-                try:
-                    output_path.unlink()
-                finally:
-                    zip_file_path.unlink(missing_ok=True)
+                # The open zip handle stays readable after unlink, so the whole
+                # report directory can go now.
+                shutil.rmtree(output_path.parent, ignore_errors=True)
