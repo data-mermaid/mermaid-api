@@ -12,7 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ..exceptions import check_uuid
-from ..models import Project
+from ..models import Project, ProjectProfile
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
 from ..signals.classification import post_edit
@@ -276,12 +276,24 @@ class CopyRecordsMixin:
         new_records = []
         for original_id in original_ids:
             check_uuid(original_id)
-            try:
-                new_record = self.get_queryset().model.objects.get_or_none(id=original_id)
-                if new_record is None:
-                    transaction.savepoint_rollback(save_point_id)
-                    raise exceptions.ValidationError(f"Original id does not exist [{original_id}]")
 
+            new_record = self.get_queryset().model.objects.get_or_none(id=original_id)
+            if new_record is None:
+                transaction.savepoint_rollback(save_point_id)
+                raise exceptions.ValidationError(f"Original id does not exist [{original_id}]")
+
+            # Only copy from a project the caller belongs to. The source was looked
+            # up with no project filter, so a collector of one project could clone
+            # (and so read) any other project's site/management records, including
+            # their GPS location (BOLA, card 2247). This check is kept outside the
+            # try/except below so the 403 is not re-wrapped as a 500.
+            if not ProjectProfile.objects.filter(
+                project_id=new_record.project_id, profile=profile
+            ).exists():
+                transaction.savepoint_rollback(save_point_id)
+                raise exceptions.PermissionDenied(f"No access to source record [{original_id}]")
+
+            try:
                 new_record.id = None
                 new_record.project_id = project_pk
                 new_record.created_by = profile
