@@ -600,7 +600,14 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         # harvest `email`/`first_name`/`last_name` from the unauthenticated
         # /v1/profiles/ endpoint whose serializer exposes only id + timestamps.
         try:
-            valid_fields = set(serializer_class().get_fields().keys())
+            # Readable fields only: a write-only field injected by get_fields() (e.g.
+            # ignore_duplicate_warning) has no model column, so selecting it would make
+            # the rebuilt serializer raise ImproperlyConfigured (500) instead of a 400.
+            valid_fields = {
+                name
+                for name, field in serializer_class().get_fields().items()
+                if not field.write_only
+            }
         except Exception:
             # A serializer that cannot be instantiated without context: fall back
             # to its declared fields plus any explicit Meta.fields allow-list.

@@ -42,3 +42,11 @@ def test_fields_param_allows_serializer_field(db_setup, api_client3, profile1):
         assert "id" in row
         assert "email" not in row
         assert "first_name" not in row
+
+
+def test_fields_param_rejects_write_only_field(db_setup, api_client1, project1, project_profile1):
+    # ignore_duplicate_warning is a write-only field with no model column; selecting
+    # it used to 500 (ImproperlyConfigured) instead of returning 400.
+    url = reverse("psite-list", kwargs=dict(project_pk=project1.pk))
+    response = api_client1.get(url, {"fields": "id,ignore_duplicate_warning"}, format="json")
+    assert response.status_code == 400
