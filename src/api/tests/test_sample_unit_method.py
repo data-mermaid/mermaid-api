@@ -227,7 +227,8 @@ def test_direct_write_to_sample_unit_method_not_allowed(
 
     put_response = api_client1.put(detail_url, data, format="json")
     assert put_response.status_code == 405
-    assert "/edit/" in put_response.json()["detail"]
+    assert "project admin" in put_response.json()["detail"]
+    assert "PUT" not in put_response["Allow"]
     assert api_client1.patch(detail_url, data, format="json").status_code == 405
     data.pop("id")
     assert api_client1.post(list_url, data, format="json").status_code == 405
@@ -270,4 +271,51 @@ def test_delete_sample_unit_method_denied_writes_no_audit_record(
 
     assert response.status_code == 403
     assert BeltFish.objects.filter(pk=belt_fish1.pk).exists()
+    assert not AuditRecord.objects.filter(record_id=belt_fish1.pk).exists()
+
+
+def test_sample_unit_method_detail_does_not_advertise_put(
+    db_setup, api_client1, project1, belt_fish1
+):
+    kwargs = {"project_pk": str(project1.pk), "pk": str(belt_fish1.pk)}
+    detail_response = api_client1.options(reverse("beltfishtransectmethod-detail", kwargs=kwargs))
+    edit_response = api_client1.options(reverse("beltfishtransectmethod-edit", kwargs=kwargs))
+
+    assert "PUT" not in detail_response["Allow"]
+    assert "DELETE" in detail_response["Allow"]
+    assert "PUT" not in detail_response.json().get("actions", {})
+    assert "PUT" in edit_response["Allow"]
+
+
+def test_collector_direct_put_points_to_project_admin(db_setup, api_client2, project1, belt_fish1):
+    url = reverse(
+        "beltfishtransectmethod-detail",
+        kwargs={"project_pk": str(project1.pk), "pk": str(belt_fish1.pk)},
+    )
+
+    response = api_client2.put(url, {}, format="json")
+
+    assert response.status_code == 405
+    assert "project admin" in response.json()["detail"]
+    assert "/edit/" not in response.json()["detail"]
+
+
+def test_delete_sample_unit_method_already_deleted_returns_404(
+    db_setup, api_client1, project1, belt_fish1
+):
+    from unittest import mock
+
+    from api.resources.sampleunitmethods.beltfishmethod import BeltFishMethodView
+
+    url = reverse(
+        "beltfishtransectmethod-detail",
+        kwargs={"project_pk": str(project1.pk), "pk": str(belt_fish1.pk)},
+    )
+    stale = BeltFish.objects.get(pk=belt_fish1.pk)
+    BeltFish.objects.filter(pk=belt_fish1.pk).delete()  # a concurrent delete won the race
+
+    with mock.patch.object(BeltFishMethodView, "get_object", return_value=stale):
+        response = api_client1.delete(url)
+
+    assert response.status_code == 404
     assert not AuditRecord.objects.filter(record_id=belt_fish1.pk).exists()

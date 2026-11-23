@@ -241,9 +241,20 @@ class SampleUnitMethodEditMixin:
     # Submitted data changes only via /edit/ -> collect record -> submit, so that
     # submission validation runs. "put" stays in http_method_names for /edit/.
     DIRECT_WRITE_NOT_ALLOWED = (
-        "Submitted records cannot be updated directly. "
-        "Use PUT .../{id}/edit/ to move the record back to Collecting, then edit and resubmit it."
+        "Submitted records cannot be updated directly. Ask a project admin to move the "
+        "record back to Collecting, then edit and resubmit it."
     )
+
+    @property
+    def allowed_methods(self):
+        # Keep the detail route from advertising PUT/PATCH (Allow header, OPTIONS);
+        # the /edit/ route's action_map maps PUT to "edit", so it still lists PUT.
+        blocked = {
+            method.upper()
+            for method, action_name in (getattr(self, "action_map", None) or {}).items()
+            if action_name in ("update", "partial_update")
+        }
+        return [m for m in super().allowed_methods if m not in blocked]
 
     def update(self, request, *args, **kwargs):
         raise exceptions.MethodNotAllowed(request.method, detail=self.DIRECT_WRITE_NOT_ALLOWED)
@@ -253,12 +264,12 @@ class SampleUnitMethodEditMixin:
 
     @transaction.atomic
     def perform_destroy(self, instance):
-        from .base import get_request_profile  # base imports this module
+        locked = type(instance).objects.select_for_update().filter(pk=instance.pk).first()
+        if locked is None:
+            raise exceptions.NotFound()
 
-        create_audit_record(
-            get_request_profile(self.request), AuditRecord.DELETE_RECORD_EVENT_TYPE, instance
-        )
-        instance.delete()
+        create_audit_record(self.request.user.profile, AuditRecord.DELETE_RECORD_EVENT_TYPE, locked)
+        locked.delete()
 
     @transaction.atomic
     @action(detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission])
