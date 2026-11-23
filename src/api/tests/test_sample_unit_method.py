@@ -1,3 +1,4 @@
+import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -6,11 +7,9 @@ from api.models import (
     AuditRecord,
     AuthUser,
     BeltFish,
-    BeltInvert,
     CollectRecord,
     Observer,
     Profile,
-    ProjectProfile,
     Revision,
 )
 
@@ -94,53 +93,6 @@ def test_sampleunitmethods_query_count_independent_of_unnamed_observer_rows(
     results = response.json()["results"]
     assert len(results) == 3
     assert all("unnamedobserver" in r["observers"] for r in results)
-
-
-def test_update_belt_invert_transect_method(db_setup, api_client1, project1, belt_invert1_with_obs):
-    belt_invert_id = str(belt_invert1_with_obs.pk)
-    url_kwargs = {"project_pk": str(project1.pk), "pk": belt_invert_id}
-    detail_url = reverse("beltinverttransectmethod-detail", kwargs=url_kwargs)
-
-    get_response = api_client1.get(detail_url)
-    assert get_response.status_code == 200
-    data = get_response.json()
-
-    put_response = api_client1.put(detail_url, data, format="json")
-    assert put_response.status_code == 200
-    put_data = put_response.json()
-    assert put_data["id"] == belt_invert_id
-
-    assert (
-        put_data["beltinvert_transect"]["len_surveyed"]
-        == data["beltinvert_transect"]["len_surveyed"]
-    )
-    assert put_data["beltinvert_transect"]["depth"] == data["beltinvert_transect"]["depth"]
-
-    assert len(put_data["obs_belt_inverts"]) == 1
-    put_obs = put_data["obs_belt_inverts"][0]
-    original_obs = data["obs_belt_inverts"][0]
-    assert put_obs["invert_attribute"] == original_obs["invert_attribute"]
-    assert put_obs["count"] == original_obs["count"]
-    assert put_obs["size"] == original_obs["size"]
-
-
-def test_update_belt_invert_transect_method_cross_project_id_rejected(
-    db_setup, api_client2, project2, profile2, project1, belt_invert1
-):
-    # profile2 is an admin of project2, but belt_invert1 belongs to project1
-    ProjectProfile.objects.create(project=project2, profile=profile2, role=ProjectProfile.ADMIN)
-
-    belt_invert_id = str(belt_invert1.pk)
-    url_kwargs = {"project_pk": str(project2.pk), "pk": belt_invert_id}
-    detail_url = reverse("beltinverttransectmethod-detail", kwargs=url_kwargs)
-
-    response = api_client2.put(detail_url, {"id": belt_invert_id}, format="json")
-
-    assert response.status_code == 404
-    # belt_invert1 is untouched and still belongs to project1
-    assert BeltInvert.objects.get(id=belt_invert_id).transect.sample_event.site.project_id == (
-        project1.pk
-    )
 
 
 def _get_latest_proj_revision():
@@ -244,3 +196,78 @@ def test_submit_collect_record_v2(
     # project is updated with # of CRs/SUs when CR submitted
     revision_num = _get_latest_proj_revision()
     assert revision_num > base_revision_num
+
+
+SAMPLE_UNIT_METHODS = [
+    ("beltfishtransectmethod", "belt_fish1"),
+    ("beltinverttransectmethod", "belt_invert1"),
+    ("benthiclittransectmethod", "benthic_lit1"),
+    ("benthicpittransectmethod", "benthic_pit1"),
+    ("benthicphotoquadrattransectmethod", "benthic_photo_quadrat_transect1"),
+    ("bleachingquadratcollectionmethod", "bleaching_quadrat_collection1"),
+    ("habitatcomplexitytransectmethod", "habitat_complexity1"),
+]
+
+
+@pytest.mark.parametrize("url_name,fixture_name", SAMPLE_UNIT_METHODS)
+def test_direct_write_to_sample_unit_method_not_allowed(
+    request, db_setup, api_client1, project1, url_name, fixture_name
+):
+    # Submitted data only changes via /edit/ -> collect record -> submit.
+    instance = request.getfixturevalue(fixture_name)
+    model = instance.__class__
+    project_pk = str(project1.pk)
+    detail_url = reverse(
+        f"{url_name}-detail", kwargs={"project_pk": project_pk, "pk": str(instance.pk)}
+    )
+    list_url = reverse(f"{url_name}-list", kwargs={"project_pk": project_pk})
+    data = api_client1.get(detail_url).json()
+    updated_on = model.objects.get(pk=instance.pk).updated_on
+    count = model.objects.count()
+
+    put_response = api_client1.put(detail_url, data, format="json")
+    assert put_response.status_code == 405
+    assert "/edit/" in put_response.json()["detail"]
+    assert api_client1.patch(detail_url, data, format="json").status_code == 405
+    data.pop("id")
+    assert api_client1.post(list_url, data, format="json").status_code == 405
+
+    assert model.objects.get(pk=instance.pk).updated_on == updated_on
+    assert model.objects.count() == count
+
+
+@pytest.mark.parametrize("url_name,fixture_name", SAMPLE_UNIT_METHODS)
+def test_delete_sample_unit_method_writes_audit_record(
+    request, db_setup, api_client1, project1, profile1, url_name, fixture_name
+):
+    instance = request.getfixturevalue(fixture_name)
+    model = instance.__class__
+    url = reverse(
+        f"{url_name}-detail", kwargs={"project_pk": str(project1.pk), "pk": str(instance.pk)}
+    )
+
+    response = api_client1.delete(url)
+
+    assert response.status_code == 204
+    assert not model.objects.filter(pk=instance.pk).exists()
+    assert AuditRecord.objects.filter(
+        record_id=instance.pk,
+        event_type=AuditRecord.DELETE_RECORD_EVENT_TYPE,
+        event_by=profile1,
+        model=model.__name__.lower(),
+    ).exists()
+
+
+def test_delete_sample_unit_method_denied_writes_no_audit_record(
+    db_setup, api_client2, project1, belt_fish1
+):
+    url = reverse(
+        "beltfishtransectmethod-detail",
+        kwargs={"project_pk": str(project1.pk), "pk": str(belt_fish1.pk)},
+    )
+
+    response = api_client2.delete(url)
+
+    assert response.status_code == 403
+    assert BeltFish.objects.filter(pk=belt_fish1.pk).exists()
+    assert not AuditRecord.objects.filter(record_id=belt_fish1.pk).exists()

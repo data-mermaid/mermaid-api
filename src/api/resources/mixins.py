@@ -12,7 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ..exceptions import check_uuid
-from ..models import Project
+from ..models import AuditRecord, Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
 from ..signals.classification import post_edit
@@ -23,7 +23,7 @@ from ..utils.duplicates import (
     find_duplicate_managements,
     find_duplicate_sites,
 )
-from ..utils.sample_unit_methods import edit_transect_method
+from ..utils.sample_unit_methods import create_audit_record, edit_transect_method
 
 
 class ProtectedResourceMixin:
@@ -237,6 +237,28 @@ class SampleUnitMethodEditMixin:
         return edit_transect_method(
             self.serializer_class, collect_record_owner, request, pk, model.protocol
         )
+
+    # Submitted data changes only via /edit/ -> collect record -> submit, so that
+    # submission validation runs. "put" stays in http_method_names for /edit/.
+    DIRECT_WRITE_NOT_ALLOWED = (
+        "Submitted records cannot be updated directly. "
+        "Use PUT .../{id}/edit/ to move the record back to Collecting, then edit and resubmit it."
+    )
+
+    def update(self, request, *args, **kwargs):
+        raise exceptions.MethodNotAllowed(request.method, detail=self.DIRECT_WRITE_NOT_ALLOWED)
+
+    def partial_update(self, request, *args, **kwargs):
+        raise exceptions.MethodNotAllowed(request.method, detail=self.DIRECT_WRITE_NOT_ALLOWED)
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        from .base import get_request_profile  # base imports this module
+
+        create_audit_record(
+            get_request_profile(self.request), AuditRecord.DELETE_RECORD_EVENT_TYPE, instance
+        )
+        instance.delete()
 
     @transaction.atomic
     @action(detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission])

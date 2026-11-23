@@ -1,7 +1,4 @@
-from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
-from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.validators import UniqueTogetherValidator
 
 from ...models import (
@@ -44,13 +41,7 @@ from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
-from . import (
-    BaseProjectMethodSEView,
-    BaseProjectMethodView,
-    clean_sample_event_models,
-    save_model,
-    save_one_to_many,
-)
+from . import BaseProjectMethodSEView, BaseProjectMethodView
 
 
 class BleachingQuadratCollectionSerializer(BaseAPISerializer):
@@ -111,109 +102,6 @@ class BleachingQuadratCollectionMethodView(SampleUnitMethodEditMixin, BaseProjec
     ).all()
     serializer_class = BleachingQuadratCollectionMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
-
-    @transaction.atomic
-    def update(self, request, project_pk, pk=None):
-        errors = {}
-        is_valid = True
-        nested_data = dict(
-            sample_event=request.data.get("sample_event"),
-            quadrat_collection=request.data.get("quadrat_collection"),
-            observers=request.data.get("observers"),
-            obs_quadrat_benthic_percent=request.data.get("obs_quadrat_benthic_percent"),
-            obs_colonies_bleached=request.data.get("obs_colonies_bleached"),
-        )
-        bleaching_qc_data = {k: v for k, v in request.data.items() if k not in nested_data}
-        bleaching_qc_id = bleaching_qc_data["id"]
-
-        context = dict(request=request)
-
-        # Save models in a transaction
-        sid = transaction.savepoint()
-        try:
-            bleaching_qc = BleachingQuadratCollection.objects.get(id=bleaching_qc_id)
-
-            # Observers
-            check, errs = save_one_to_many(
-                foreign_key=("transectmethod", bleaching_qc_id),
-                database_records=bleaching_qc.observers.all(),
-                data=request.data.get("observers") or [],
-                serializer_class=ObserverSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["observers"] = errs
-
-            # Observations - Colonies Bleached
-            check, errs = save_one_to_many(
-                foreign_key=("bleachingquadratcollection", bleaching_qc_id),
-                database_records=bleaching_qc.obscoloniesbleached_set.all(),
-                data=request.data.get("obs_colonies_bleached") or [],
-                serializer_class=ObsColoniesBleachedSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["obs_colonies_bleached"] = errs
-
-            # Observations - Quadrat Benthic Percent
-            check, errs = save_one_to_many(
-                foreign_key=("bleachingquadratcollection", bleaching_qc_id),
-                database_records=bleaching_qc.obsquadratbenthicpercent_set.all(),
-                data=request.data.get("obs_quadrat_benthic_percent") or [],
-                serializer_class=ObsQuadratBenthicPercentSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["obs_quadrat_benthic_percent"] = errs
-
-            # Sample Event
-            check, errs = save_model(
-                data=nested_data["sample_event"],
-                serializer_class=SampleEventSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["sample_event"] = errs
-
-            # Quadrat Collection
-            check, errs = save_model(
-                data=nested_data["quadrat_collection"],
-                serializer_class=QuadratCollectionSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["quadrat_collection"] = errs
-
-            # Bleaching Quadrat Collection
-            check, errs = save_model(
-                data=bleaching_qc_data,
-                serializer_class=BleachingQuadratCollectionSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["bleaching_quadrat_collection"] = errs
-
-            if is_valid is False:
-                transaction.savepoint_rollback(sid)
-                return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
-
-            clean_sample_event_models(nested_data["sample_event"])
-
-            transaction.savepoint_commit(sid)
-            bleaching_qc = BleachingQuadratCollection.objects.get(id=bleaching_qc_id)
-            return Response(
-                BleachingQuadratCollectionMethodSerializer(bleaching_qc).data,
-                status=status.HTTP_200_OK,
-            )
-        except:
-            transaction.savepoint_rollback(sid)
-            raise
 
 
 class BleachingQCMethodObsColoniesBleachedSerializer(BaseSUViewAPISerializer):
