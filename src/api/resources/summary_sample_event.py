@@ -1,8 +1,8 @@
-from django.db.models import CharField, Q
+from django.db.models import CharField, Q, Subquery
 from django_filters import rest_framework as filters
 from rest_framework.serializers import SerializerMethodField
 
-from ..models import Project, SummarySampleEventModel
+from ..models import Project, ProjectProfile, SummarySampleEventModel
 from ..permissions import UnauthenticatedReadOnlyPermission
 from ..reports.fields import ReportField
 from ..reports.formatters import (
@@ -23,6 +23,19 @@ from ..reports.report_serializer import ReportSerializer
 from ..utils.project import citation_retrieved_text
 from .base import AggregatedViewFilterSet, BaseViewAPIGeoSerializer, BaseViewAPISerializer
 from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
+
+# Defined locally (not imported from utils.project) to avoid the summary_cache import
+# cycle. These are the summary model's per-protocol data-policy columns, stored as the
+# strings "private" / "public summary" / "public".
+DATA_POLICY_FIELDS = (
+    "data_policy_beltfish",
+    "data_policy_benthiclit",
+    "data_policy_benthicpit",
+    "data_policy_benthicpqt",
+    "data_policy_bleachingqc",
+    "data_policy_habitatcomplexity",
+    "data_policy_macroinvertebrate",
+)
 
 
 class SummarySampleEventSerializer(BaseViewAPISerializer):
@@ -422,3 +435,23 @@ class SummarySampleEventView(AggregatedViewMixin, BaseApiViewSet):
     queryset = SummarySampleEventModel.objects.filter(~Q(project_status=Project.TEST))
     ordering_fields = ["project_name", "site_name"]
     ordering = ["project_name", "site_name"]
+
+    def get_queryset(self):
+        # The protocol metric values are nulled for private data, but the row itself -
+        # site name, GPS, management, admins, tags, sample date - was returned for every
+        # non-TEST project, including fully-PRIVATE ones, to anonymous callers (card 2259).
+        # Hide a row only when every protocol policy is "private" and the caller is not a
+        # member of its project.
+        qs = SummarySampleEventModel.objects.filter(~Q(project_status=Project.TEST))
+
+        fully_private = Q()
+        for field in DATA_POLICY_FIELDS:
+            fully_private &= Q(**{field: "private"})
+        visible = ~fully_private
+
+        profile = getattr(self.request.user, "profile", None)
+        if profile is not None:
+            member_project_ids = ProjectProfile.objects.filter(profile=profile).values("project_id")
+            visible |= Q(project_id__in=Subquery(member_project_ids))
+
+        return qs.filter(visible)
