@@ -413,14 +413,16 @@ def vw_pull(request):
         if code == 200:
             response_data[source_type] = _get_source_records(source_type, source_data, request)
         elif code in [401, 403]:
-            source_data["last_revision"] = None
-            response = _get_source_records(source_type, source_data, request)
-            record_ids = [rec["id"] for rec in response["updates"]]
-            record_ids.extend(rec["id"] for rec in response["deletes"])
-            response["updates"] = []
-            response["deletes"] = []
-            response["error"] = {"code": code, "record_ids": record_ids}
-            response_data[source_type] = response
+            # Do not query and return the project's record ids on denial. Doing so let
+            # an authenticated non-member name any project and enumerate its record
+            # UUIDs (counts/existence), the discovery primitive behind the sync-push
+            # cross-tenant write (card 2243). Return only the error code; a client that
+            # lost access purges from the ids it already holds locally.
+            response_data[source_type] = {
+                "updates": [],
+                "deletes": [],
+                "error": {"code": code},
+            }
 
     return Response(response_data)
 
