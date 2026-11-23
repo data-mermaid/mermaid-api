@@ -37,7 +37,11 @@ class MeSerializer(BaseAPISerializer):
             "collect_state",
             "explore_state",
         ]
-        read_only_fields = ["id", "created_on", "updated_on", "full_name"]
+        # `email` is read-only: changing it here applied with no confirmation and no
+        # ownership check, and (because logins and invites are matched by email) was a
+        # seed/aim step toward account takeover (card 2238). An email change must go
+        # through a verified round-trip, not this endpoint.
+        read_only_fields = ["id", "created_on", "updated_on", "full_name", "email"]
 
     def to_internal_value(self, data):
         # Normalize before EmailField validation so pasted invisible characters
