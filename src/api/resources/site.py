@@ -6,6 +6,7 @@ from rest_framework import serializers
 from ..exceptions import check_uuid
 from ..models import Project, Site
 from ..permissions import AuthenticatedReadOnlyPermission
+from ..utils.project import data_sharing_visible_q
 from .base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
@@ -156,3 +157,10 @@ class SiteViewSet(ProtectedResourceMixin, BaseApiViewSet):
         "$project__name",
         "$country__name",
     ]
+
+    def get_queryset(self):
+        # Only AuthenticatedReadOnlyPermission gated this global endpoint, so any logged-in
+        # user saw every non-test project's sites (incl. GPS), ignoring membership and data
+        # policy (card 2240). Limit to public-policy projects plus the caller's own.
+        profile = getattr(self.request.user, "profile", None)
+        return super().get_queryset().filter(data_sharing_visible_q(profile)).distinct()

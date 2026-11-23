@@ -1110,3 +1110,32 @@ def delete_project(pk):
                 logger.exception("Delete Project: %s", err)
                 transaction.savepoint_rollback(sid)
                 raise
+
+
+DATA_POLICY_FIELDS = (
+    "data_policy_beltfish",
+    "data_policy_benthiclit",
+    "data_policy_benthicpit",
+    "data_policy_benthicpqt",
+    "data_policy_bleachingqc",
+    "data_policy_habitatcomplexity",
+    "data_policy_macroinvertebrate",
+)
+
+
+def data_sharing_visible_q(profile, project_path="project"):
+    """Q matching rows whose project a caller may see under data sharing: any project
+    with a non-PRIVATE data policy on any protocol, plus every project the profile is a
+    member of. Used to stop the global /sites/ and /managements/ endpoints from leaking
+    fully-PRIVATE projects' data (e.g. site GPS) to non-members (card 2240).
+    """
+    from django.db.models import Q
+
+    from ..models import Project
+
+    q = Q()
+    for field in DATA_POLICY_FIELDS:
+        q |= Q(**{f"{project_path}__{field}__gte": Project.PUBLIC_SUMMARY})
+    if profile is not None:
+        q |= Q(**{f"{project_path}__profiles__profile": profile})
+    return q
