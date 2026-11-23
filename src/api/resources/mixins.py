@@ -12,11 +12,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ..exceptions import check_uuid
-from ..models import Project
+from ..models import ProjectProfile
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
 from ..signals.classification import post_edit
-from ..utils import get_protected_related_objects, truthy
+from ..utils import get_protected_related_objects, is_uuid, truthy
 from ..utils.duplicates import (
     NOT_UNIQUE_SITE_CODE,
     SIMILAR_NAME_CODE,
@@ -226,9 +226,17 @@ class OrFilterSetMixin:
 
 class SampleUnitMethodEditMixin:
     def edit_sample_unit(self, request, pk, project_pk):
-        collect_record_owner = Project.objects.get_or_none(id=request.data.get("owner"))
-        if collect_record_owner is None:
-            collect_record_owner = request.user.profile
+        # `owner` is a Profile id. Accept it only for a member of the URL project;
+        # otherwise the collect record goes to the caller.
+        owner_id = request.data.get("owner")
+        owner_pp = None
+        if is_uuid(owner_id):
+            owner_pp = (
+                ProjectProfile.objects.select_related("profile")
+                .filter(project_id=project_pk, profile_id=owner_id)
+                .first()
+            )
+        collect_record_owner = owner_pp.profile if owner_pp else request.user.profile
 
         model = self.get_queryset().model
         if hasattr(model, "protocol") is False:
