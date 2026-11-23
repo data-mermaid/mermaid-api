@@ -1,3 +1,4 @@
+import logging
 import threading as th
 from collections import defaultdict
 
@@ -5,6 +6,8 @@ import boto3
 from django.conf import settings
 
 from simpleq.jobs import Job
+
+logger = logging.getLogger(__name__)
 
 
 class Queue:
@@ -239,12 +242,23 @@ class Queue:
             AttributeNames=["All"],
             MaxNumberOfMessages=self.BATCH_SIZE,
             WaitTimeSeconds=self.WAIT_SECONDS,
-            MessageAttributeNames=["id"],
+            # "sig" is required: Job.from_message verifies the HMAC signature carried in
+            # this attribute before unpickling. SQS only returns attributes named here, so
+            # omitting "sig" would make every job fail verification.
+            MessageAttributeNames=["id", "sig"],
         )
         duplicate_job_groups = {}
 
         for message in messages:
-            job = Job.from_message(message)
+            try:
+                job = Job.from_message(message)
+            except ValueError:
+                # Bad or missing signature: skip only this message so the worker loop
+                # and the rest of the batch keep running. The message is not deleted;
+                # it reappears after its visibility timeout and the redrive policy
+                # moves it to the dead-letter queue.
+                logger.warning("Rejected SQS message %s: invalid job signature", message.message_id)
+                continue
             if job.id is not None and job.id in duplicate_job_groups:
                 duplicate_job_groups[job.id].append(job)
                 continue
