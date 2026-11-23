@@ -36,6 +36,7 @@ def test_edit_transect_method(belt_fish_project, belt_fish1, profile1, profile1_
             profile1_request,
             belt_fish1.pk,
             FISHBELT_PROTOCOL,
+            project_id,
         )
 
         update_summary_cache(project_id, skip_cached_files=True)

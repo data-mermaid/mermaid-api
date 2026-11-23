@@ -137,13 +137,16 @@ class BenthicPhotoQuadratTransectMethodView(SampleUnitMethodEditMixin, BaseProje
             qs = qs.prefetch_related(*prefetches)
         return qs
 
-    def edit_sample_unit(self, request, pk):
-        bpqt_record = self.get_queryset().get_or_none(pk=pk)
+    def edit_sample_unit(self, request, pk, project_pk):
+        model = self.get_queryset().model
+        # Scope to the URL project so a record from another project cannot be read
+        # or edited by its id alone (BOLA, card 2246).
+        bpqt_record = self.get_queryset().get_or_none(pk=pk, **{model.project_lookup: project_pk})
         if bpqt_record is None:
             raise NotFound(f"[{pk}] Benthic PQT record not found.")
 
         image_classification = bpqt_record.image_classification
-        cr = super().edit_sample_unit(request, pk)
+        cr = super().edit_sample_unit(request, pk, project_pk)
         if image_classification:
             image_classification = True
 
