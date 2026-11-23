@@ -312,6 +312,11 @@ def annotate_num_sample_units(qs):
     )
 
 
+LOCKED_PROJECT_WRITE_MSG = (
+    "This project is locked; unlock it from the admin console before editing."
+)
+
+
 class ProjectViewSet(BaseApiViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [
@@ -330,10 +335,16 @@ class ProjectViewSet(BaseApiViewSet):
         # every API write while locked; unlocking is a staff/admin-console action.
         instance = serializer.instance
         if instance is not None and instance.status == Project.LOCKED:
-            raise exceptions.PermissionDenied(
-                "This project is locked; unlock it from the admin console before editing."
-            )
+            raise exceptions.PermissionDenied(LOCKED_PROJECT_WRITE_MSG)
         super().perform_update(serializer)
+
+    def _assert_project_not_locked(self, project_pk):
+        # perform_update guards the standard update path, but custom write actions
+        # (add_profile, find_and_replace_*, transfer_sample_units) never reach it, so
+        # an admin could still mutate a LOCKED project through them (card 2258). A
+        # malformed pk matches nothing here and is rejected downstream as before.
+        if Project.objects.filter(pk=project_pk, status=Project.LOCKED).exists():
+            raise exceptions.PermissionDenied(LOCKED_PROJECT_WRITE_MSG)
 
     def get_queryset(self):
         site_table = Site._meta.db_table
@@ -626,6 +637,8 @@ class ProjectViewSet(BaseApiViewSet):
         if qp_replace_obj_id is None:
             raise exceptions.ValidationError("'replace' is required", code=400)
 
+        self._assert_project_not_locked(project_id)
+
         profile = request.user.profile
         with transaction.atomic():
             sid = transaction.savepoint()
@@ -669,6 +682,10 @@ class ProjectViewSet(BaseApiViewSet):
             project = Project.objects.get(pk=project_id)
         except (exceptions.ParseError, Project.DoesNotExist):
             raise exceptions.ValidationError("Invalid or nonexistent project", code=400)
+
+        if project.status == Project.LOCKED:
+            raise exceptions.PermissionDenied(LOCKED_PROJECT_WRITE_MSG)
+
         qp_to_profile_id = request.data.get("to_profile")
         qp_from_profile_id = request.data.get("from_profile")
 
@@ -712,6 +729,7 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectDataAdminPermission],
     )
     def add_profile(self, request, pk, *args, **kwargs):
+        self._assert_project_not_locked(pk)
         email = normalize_email(request.data.get("email"))
         if not email:
             raise exceptions.ValidationError(detail={"email": "Email is required"})

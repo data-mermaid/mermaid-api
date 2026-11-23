@@ -38,3 +38,38 @@ def test_admin_can_edit_open_project(db_setup, api_client1, project1, project_pr
     assert response.status_code == 200
     project1.refresh_from_db()
     assert project1.name == "renamed-open"
+
+
+# perform_update guards the standard update path; these custom write actions bypass it.
+
+
+def test_admin_cannot_add_profile_to_locked_project(
+    db_setup, api_client1, project1, project_profile1
+):
+    project1.status = Project.LOCKED
+    project1.save()
+    url = reverse("project-add-profile", args=[str(project1.pk)])
+    response = api_client1.post(url, {"email": "newperson@example.com"}, format="json")
+    assert response.status_code == 403
+
+
+def test_admin_cannot_transfer_sample_units_on_locked_project(
+    db_setup, api_client1, project1, project_profile1
+):
+    project1.status = Project.LOCKED
+    project1.save()
+    url = reverse("project-transfer-sample-units", args=[str(project1.pk)])
+    response = api_client1.put(url, {}, format="json")
+    assert response.status_code == 403
+
+
+def test_admin_cannot_find_and_replace_sites_on_locked_project(
+    db_setup, api_client1, project1, project_profile1
+):
+    project1.status = Project.LOCKED
+    project1.save()
+    url = reverse("project-find-and-replace-sites", args=[str(project1.pk)])
+    response = api_client1.put(
+        url, {"find": [str(project1.pk)], "replace": str(project1.pk)}, format="json"
+    )
+    assert response.status_code == 403
