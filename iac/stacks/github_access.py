@@ -28,6 +28,11 @@ class GithubAccessStack(Stack):
                         # it. Still allows any ref/PR of mermaid-api so pr.yml (which today
                         # assumes this role) keeps working.
                         #
+                        # This is not a fork-PR boundary: a fork PR against this repo gets
+                        # the subject "repo:data-mermaid/mermaid-api:pull_request", which
+                        # matches. GitHub's fork-PR limits (no secrets, read-only token by
+                        # default) are what stop a fork from assuming this role.
+                        #
                         # Phase 2 (follow-up, AFTER the read-only role below is deployed):
                         # pin this to ":environment:dev"/":environment:prod" and point
                         # pr.yml at github-pr-readonly-role, so PRs can no longer assume the
