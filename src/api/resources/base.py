@@ -593,11 +593,21 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
 
         fields = tuple(sorted(field_set))
 
-        # Validate that all requested field names are known to this serializer.
-        valid_fields = set(serializer_class._declared_fields.keys())
-        model = getattr(getattr(serializer_class, "Meta", None), "model", None)
-        if model is not None:
-            valid_fields |= {f.name for f in model._meta.get_fields()}
+        # `fields` may only narrow the response, never widen it. Restrict the
+        # selectable names to what the base serializer already exposes - NOT to
+        # every column on the model. Validating against `model._meta.get_fields()`
+        # let a caller select columns the serializer deliberately omits, e.g.
+        # harvest `email`/`first_name`/`last_name` from the unauthenticated
+        # /v1/profiles/ endpoint whose serializer exposes only id + timestamps.
+        try:
+            valid_fields = set(serializer_class().get_fields().keys())
+        except Exception:
+            # A serializer that cannot be instantiated without context: fall back
+            # to its declared fields plus any explicit Meta.fields allow-list.
+            valid_fields = set(serializer_class._declared_fields.keys())
+            meta_fields = getattr(getattr(serializer_class, "Meta", None), "fields", None)
+            if meta_fields and meta_fields != "__all__":
+                valid_fields |= set(meta_fields)
         invalid_fields = [f for f in fields if f not in valid_fields]
         if invalid_fields:
             raise ValidationError({"fields": f"Invalid field names: {', '.join(invalid_fields)}"})
