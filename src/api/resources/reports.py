@@ -3,11 +3,12 @@ import shutil
 
 from django.http import FileResponse
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import Project
+from ..models import Project, ProjectProfile
 from ..reports import gfcr
 from ..reports.summary_report import PROTOCOL_VIEW_MAPPING
 from ..utils import zip_file
@@ -44,6 +45,8 @@ class SampleUnitMethodReportSerializer(BaseMultiProjectReportSerializer):
 
 
 class MultiProjectReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get_serializer(self, *args, **kwargs):
         report_type = kwargs.get("data", {}).get("report_type")
         if report_type == SAMPLE_UNIT_METHOD_REPORT_TYPE:
@@ -82,6 +85,20 @@ class MultiProjectReportView(APIView):
                 )
 
         elif report_type == GFCR_REPORT_TYPE:
+            # GFCR has no public data policy, so a GFCR report may only cover
+            # projects the caller is a member of. The request validated only that
+            # the project ids exist, which let any authenticated user pull any
+            # project's GFCR financial data (BOLA, card 2256).
+            profile = request.user.profile
+            member_ids = set(
+                ProjectProfile.objects.filter(
+                    project_id__in=project_ids, profile=profile
+                ).values_list("project_id", flat=True)
+            )
+            forbidden = [str(pid) for pid in project_ids if pid not in member_ids]
+            if forbidden:
+                raise PermissionDenied(f"Not a member of project(s): {', '.join(forbidden)}")
+
             if background:
                 gfcr.create_report_background(
                     project_ids=project_ids,
