@@ -271,6 +271,12 @@ def decode(token):
     if alg == "RS256":
         return decode_rsa(token)
     elif alg == "HS256":
+        # The algorithm is read from the token's own header, so a caller can pick
+        # HS256 and have the token verified with the symmetric signing secret. That
+        # is only for local/CI test tokens; on deployed environments it would let a
+        # leaked secret forge any identity (card 2237). Reject it there.
+        if not getattr(settings, "ALLOW_HS256_TOKENS", False):
+            raise exceptions.AuthenticationFailed("HS256 tokens are not accepted")
         return decode_hs(token)
 
     msg = f"{alg} algorithm not supported"
