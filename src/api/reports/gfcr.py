@@ -1,10 +1,11 @@
 import logging
+import shutil
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import mkdtemp
 
 from ..mocks import MockRequest
 from ..models import GFCRFinanceSolution, GFCRIndicatorSet
-from ..utils import castutils, create_iso_date_string, delete_file
+from ..utils import castutils, create_iso_date_string
 from ..utils.email import email_report
 from ..utils.project import citation_retrieved_text, get_profiles, suggested_citation
 from ..utils.q import submit_job
@@ -277,20 +278,27 @@ def create_report(project_ids, request=None, send_email=None):
         xl.write_data_to_sheet(wb, sheet_name, data, 2, 1)
         xl.auto_size_columns(wb[sheet_name])
 
-    with NamedTemporaryFile(delete=False) as f:
-        try:
-            temppath = Path(f.name)
-            output_path = temppath.rename(f"{temppath.parent}/{create_iso_date_string()}_gfcr.xlsx")
-            wb.save(output_path)
-        except Exception:
-            logger.exception("Error saving workbook")
-            return None
+    # Unique directory per report: the file name is the same for every report
+    # created on a given day, and callers use it for the download/zip name.
+    output_dir = None
+    try:
+        output_dir = Path(mkdtemp())
+        output_path = output_dir / f"{create_iso_date_string()}_gfcr.xlsx"
+        wb.save(output_path)
+    except Exception:
+        logger.exception("Error saving workbook")
+        if output_dir:
+            shutil.rmtree(output_dir, ignore_errors=True)
+        return None
 
-        if send_email:
-            email_report(request.user.profile.email, output_path, "GFCR")
-            delete_file(output_path)
-        else:
-            return output_path
+    if not send_email:
+        # The caller owns output_path.parent and must remove it when done.
+        return output_path
+
+    try:
+        email_report(request.user.profile.email, output_path, "GFCR")
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
 
 
 def create_report_background(project_ids, request=None, send_email=None):

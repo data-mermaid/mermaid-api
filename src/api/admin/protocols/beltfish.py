@@ -24,6 +24,7 @@ from ...models import (
 )
 from ..base import (
     AttributeAdmin,
+    AuditFieldsAutocompleteMixin,
     BaseAdmin,
     ObservationInline,
     ObserverInline,
@@ -78,7 +79,7 @@ class FishAttributeAdmin(AttributeAdmin):
         return super().delete_view(request, object_id, extra_context)
 
 
-class BeltTransectWidthConditionInline(admin.StackedInline):
+class BeltTransectWidthConditionInline(AuditFieldsAutocompleteMixin, admin.StackedInline):
     model = BeltTransectWidthCondition
     extra = 0
 
@@ -166,7 +167,6 @@ class FishGroupingAdmin(FishAttributeGroupingAdmin):
         "region_list",
     )
     search_fields = ["name"]
-    autocomplete_fields = ["created_by", "updated_by"]
     exportable_fields = (
         "name",
         "biomass_constant_a",
@@ -191,7 +191,7 @@ class FishGroupingAdmin(FishAttributeGroupingAdmin):
             yield inline.get_formset(request, obj), inline
 
 
-class FishGenusInline(admin.StackedInline):
+class FishGenusInline(AuditFieldsAutocompleteMixin, admin.StackedInline):
     model = FishGenus
     fk_name = "family"
     extra = 1
@@ -210,7 +210,7 @@ class FishFamilyAdmin(FishAttributeGroupingAdmin):
     search_fields = ["name"]
 
 
-class FishSpeciesInline(admin.StackedInline):
+class FishSpeciesInline(AuditFieldsAutocompleteMixin, admin.StackedInline):
     model = FishSpecies
     fk_name = "genus"
     extra = 1
@@ -257,6 +257,7 @@ class FishSpeciesAdmin(FishAttributeAdmin):
         "region_list",
     )
     search_fields = ["name", "genus__name", "genus__family__name"]
+    autocomplete_fields = ("genus",)
     list_filter = (
         "status",
         "group_size",

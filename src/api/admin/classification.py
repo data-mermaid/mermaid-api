@@ -39,6 +39,7 @@ class ImageAdmin(BaseAdmin):
 
 @admin.register(BenthicAttributeGrowthForm)
 class BenthicAttributeGrowthFormAdmin(BaseAdmin):
+    autocomplete_fields = ("benthic_attribute",)
     list_display = [
         "benthic_attribute_id",
         "benthic_attribute",
@@ -109,6 +110,7 @@ class LabelMappingAdmin(ImportExportModelAdmin, BaseAdmin):
     resource_classes = [LabelMappingResource]
     list_display = ["benthic_attribute", "growth_form", "provider", "provider_label", "provider_id"]
     readonly_fields = ["created_by", "updated_by"]
+    autocomplete_fields = ("benthic_attribute",)
     list_filter = ["provider"]
     search_fields = [
         "benthic_attribute__name",

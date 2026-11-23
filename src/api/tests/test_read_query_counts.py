@@ -38,7 +38,7 @@ from api.resources.project import ProjectViewSet
 from api.resources.project_profile import ProjectProfileViewSet
 from api.resources.sampleunitmethods.beltfishmethod import BeltFishMethodSerializer
 from api.resources.sync.pull import get_serialized_records
-from api.utils.project import suggested_citation
+from api.utils.project import create_submitted_summary, suggested_citation
 
 REVISION_KEYS = ("_last_revision_num", "_modified", "_deleted")
 
@@ -307,3 +307,62 @@ def test_project_citation_from_annotation_matches_query(
         expected = suggested_citation(Project.objects.get(pk=project.pk))
         assert suggested_citation(project, project.profiles_by_name) == expected
         assert str(sample_date1.year) in expected
+
+
+def _add_summary_belt_fishes(start, count, transect, observers, su_editor, record_editor):
+    for i in range(start, start + count):
+        new_transect = FishBeltTransect.objects.create(
+            sample_event=transect.sample_event,
+            current=transect.current,
+            reef_slope=transect.reef_slope,
+            relative_depth=transect.relative_depth,
+            size_bin=transect.size_bin,
+            tide=transect.tide,
+            visibility=transect.visibility,
+            width=transect.width,
+            depth=transect.depth,
+            len_surveyed=transect.len_surveyed,
+            sample_time=transect.sample_time,
+            number=100 + i,
+            updated_by=su_editor,
+        )
+        belt_fish = BeltFish.objects.create(transect=new_transect, updated_by=record_editor)
+        for profile in observers:
+            Observer.objects.create(transectmethod=belt_fish, profile=profile)
+
+
+def _submitted_summary(project):
+    with CaptureQueriesContext(connection) as ctx:
+        protocols, summary = create_submitted_summary(project)
+    return protocols, summary, len(ctx.captured_queries)
+
+
+def test_submitted_summary_query_count_independent_of_row_count(
+    db_setup, project1, site1, profile1, fishbelt_transect1
+):
+    record_editor = Profile.objects.create(
+        email="record-editor@mermaidcollect.org", first_name="Record", last_name="Editor"
+    )
+    # A nameless profile's full_name runs an authusers COUNT; it must run once per profile.
+    nameless = Profile.objects.create(email="nameless@mermaidcollect.org")
+    AuthUser.objects.create(profile=nameless, user_id="test|nameless@mermaidcollect.org")
+    add_rows = lambda start, count: _add_summary_belt_fishes(  # noqa: E731
+        start, count, fishbelt_transect1, [profile1, nameless], nameless, record_editor
+    )
+
+    add_rows(0, 2)
+    _, summary_1x, queries_1x = _submitted_summary(project1)
+    add_rows(2, 4)
+    protocols, summary_3x, queries_3x = _submitted_summary(project1)
+
+    records_1x = summary_1x[str(site1.pk)]["sample_unit_methods"]["fishbelt"]
+    records_3x = summary_3x[str(site1.pk)]["sample_unit_methods"]["fishbelt"]
+    assert len(records_1x) == 2
+    assert len(records_3x) == 6
+    assert queries_3x == queries_1x
+
+    assert protocols == ["fishbelt"]
+    for record in records_3x:
+        # The sample unit's editor, not the method record's.
+        assert record["updated_by"] == "nameless"
+        assert sorted(record["observers"]) == sorted([profile1.full_name, "nameless"])

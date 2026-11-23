@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db.models import Q
 
 from ..models import CollectRecord, Notification, ProjectProfile
-from ..utils.email import mermaid_email
+from ..utils.email import emails_with_accounts, mermaid_email
 from ..utils.notification import _suppress_notifications, add_notification
 
 
@@ -30,14 +30,31 @@ def notify_project_users(
     if len(project_profiles) > 0:
         add_notification(subject, Notification.INFO, notify_template, context, project_profiles)
 
-        project_emails = [p.email for p in project_profiles]
+        project_emails = emails_with_accounts(project_profiles)
+        if project_emails:
+            mermaid_email(
+                subject=subject,
+                template=email_template,
+                to=project_emails,
+                context=context,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                reply_to=project_emails,
+            )
+
+
+def notify_profile(profile, subject, email_template, notify_template, context, reply_to=None):
+    """Notify a single profile, emailing them whether or not they have an account."""
+    if _suppress_notifications.get():
+        return
+    add_notification(subject, Notification.INFO, notify_template, context, [profile])
+    if profile.email:
         mermaid_email(
             subject=subject,
             template=email_template,
-            to=project_emails,
+            to=[profile.email],
             context=context,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            reply_to=project_emails,
+            reply_to=reply_to,
         )
 
 
@@ -51,28 +68,32 @@ def notify_crs_transferred(project, from_profile, to_profile, admin_profile):
         email_template = "emails/crs_transferred_away.txt"
         context["to_profile"] = to_profile
         add_notification(subject, Notification.INFO, notify_template, context, [from_profile])
-        mermaid_email(
-            subject=subject,
-            template=email_template,
-            to=[from_profile.email],
-            context=context,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            reply_to=[admin_profile.email],
-        )
+        to_emails = emails_with_accounts([from_profile])
+        if to_emails:
+            mermaid_email(
+                subject=subject,
+                template=email_template,
+                to=to_emails,
+                context=context,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                reply_to=[admin_profile.email],
+            )
 
     if admin_profile != to_profile:
         notify_template = "notifications/crs_transferred_to.txt"
         email_template = "emails/crs_transferred_to.txt"
         context["from_profile"] = from_profile
         add_notification(subject, Notification.INFO, notify_template, context, [to_profile])
-        mermaid_email(
-            subject=subject,
-            template=email_template,
-            to=[to_profile.email],
-            context=context,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            reply_to=[admin_profile.email],
-        )
+        to_emails = emails_with_accounts([to_profile])
+        if to_emails:
+            mermaid_email(
+                subject=subject,
+                template=email_template,
+                to=to_emails,
+                context=context,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                reply_to=[admin_profile.email],
+            )
 
 
 def notify_admins_project_change(instance, text_changes):
