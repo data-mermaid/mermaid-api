@@ -1,6 +1,7 @@
 import csv
 from collections.abc import Mapping
 
+from ..utils.castutils import neutralize_formula
 from . import BaseReport
 
 
@@ -18,9 +19,10 @@ class RawCSVReport(BaseReport):
             if isinstance(record_dict[k], (list, set, tuple)) and len(record_dict[k]) > 0:
                 if isinstance(record_dict[k][0], Mapping):
                     continue
-                record_dict[k] = ",".join([str(e) for e in v])
+                record_dict[k] = neutralize_formula(",".join([str(e) for e in v]))
             else:
-                record_dict[k] = v
+                # Neutralize spreadsheet-formula prefixes on any string cell (CWE-1236).
+                record_dict[k] = neutralize_formula(v)
 
         return record_dict
 
@@ -42,7 +44,7 @@ class RawCSVReport(BaseReport):
         csv_writer = csv.writer(csv_buffer)
         yield csv_writer.writerow(fields)
         for row in data:
-            yield csv_writer.writerow(row)
+            yield csv_writer.writerow([neutralize_formula(cell) for cell in row])
 
     def stream(self, fields, data, *args, **kwargs):
         if data is None:
