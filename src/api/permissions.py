@@ -182,16 +182,43 @@ def get_project_pk(request, view):
     data = request.data or {}
     kwargs = view.kwargs or {}
 
-    pk = None
+    # The URL identifies the project under action, so it is authoritative for the
+    # permission decision. The request body must never select a different project
+    # than the URL. Before, the body won: a member of project A sent the body
+    # "project": A against a URL that targeted project B, passed the check against
+    # A, and the read/write still acted on B (BOLA).
+    url_pk = None
     if "project_pk" in kwargs:  # project pk from nested drf url
-        pk = kwargs["project_pk"]
+        url_pk = kwargs["project_pk"]
     elif "pk" in kwargs:  # project pk from project endpoint itself
-        pk = kwargs["pk"]
-    # project pk from attribute of data submitted.
-    # Don't let users submit data related to another project.
-    if "project" in data:
-        pk = data["project"]
-    return pk
+        url_pk = kwargs["pk"]
+
+    if url_pk is not None:
+        # A body that names a different project than the URL is a BOLA attempt.
+        # Reject it rather than silently ignore it: silently ignoring still let a
+        # create write the body project (perform_create does not re-bind it).
+        for body_pk in _body_project_pks(data):
+            if str(body_pk) != str(url_pk):
+                raise PermissionDenied("Request body project does not match the URL project.")
+        return url_pk
+
+    # No project in the URL (for example sync push, which builds the check with
+    # empty view.kwargs): fall back to the body.
+    if isinstance(data, dict) and "project" in data:
+        return data["project"]
+    return None
+
+
+def _body_project_pks(data):
+    """Yield every "project" value in a request body (a single object, or each
+    element of a bulk list payload)."""
+    if isinstance(data, dict):
+        if "project" in data and data["project"] is not None:
+            yield data["project"]
+    elif isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict) and item.get("project") is not None:
+                yield item["project"]
 
 
 class ProjectDataPermission(permissions.BasePermission):
