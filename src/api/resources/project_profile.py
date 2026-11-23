@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Count, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from rest_framework import permissions, serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from ..models import CollectRecord, ProjectProfile
 from ..permissions import (
@@ -106,6 +106,15 @@ class ProjectProfileViewSet(BaseProjectApiViewSet):
             instance.__dict__.pop("collect_records_count", None)
 
     def perform_destroy(self, instance):
+        # ProjectProfileCollectorPermission lets a COLLECTOR reach DELETE, but a
+        # collector may only remove their own membership (leave the project).
+        # Removing another member is an admin action (card 2239).
+        user_profile = self.request.user.profile
+        acting_pp = get_project_profile(instance.project, user_profile, request=self.request)
+        is_admin = acting_pp is not None and acting_pp.is_admin
+        if not is_admin and instance.profile_id != getattr(user_profile, "pk", None):
+            raise PermissionDenied("Only a project admin can remove another member.")
+
         with transaction.atomic():
             if instance.is_last_admin(for_update=True):
                 raise ValidationError(
