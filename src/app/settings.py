@@ -256,6 +256,13 @@ AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get("AUTH0_MANAGEMENT_API_AUDIENCE")
 MERMAID_API_AUDIENCE = os.environ.get("MERMAID_API_AUDIENCE")
 MERMAID_API_SIGNING_SECRET = os.environ.get("MERMAID_API_SIGNING_SECRET")
 
+# HS256 tokens are signed with MERMAID_API_SIGNING_SECRET and are only used to mint
+# local/CI test tokens. Accepting them on deployed environments means a leaked
+# symmetric secret forges any identity (alg-confusion auth bypass), so only accept
+# HS256 on local (an allowlist, so a new deployed ENV name does not enable it).
+# Real logins use Auth0 RS256.
+ALLOW_HS256_TOKENS = ENVIRONMENT in ("local",)
+
 # ***************
 # ** API keys  **
 # ***************
