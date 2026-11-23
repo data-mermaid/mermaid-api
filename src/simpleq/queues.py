@@ -239,7 +239,10 @@ class Queue:
             AttributeNames=["All"],
             MaxNumberOfMessages=self.BATCH_SIZE,
             WaitTimeSeconds=self.WAIT_SECONDS,
-            MessageAttributeNames=["id"],
+            # "sig" is required: Job.from_message verifies the HMAC signature carried in
+            # this attribute before unpickling. SQS only returns attributes named here, so
+            # omitting "sig" would make every job fail verification.
+            MessageAttributeNames=["id", "sig"],
         )
         duplicate_job_groups = {}
 
