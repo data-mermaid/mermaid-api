@@ -22,7 +22,7 @@ def test_cannot_enumerate_other_project_members_via_body_override(
     # api_client1 is a member of project1, not of project2.
     url = reverse("project_profile-list", args=[str(project2.pk)])
     response = _get_with_body(api_client1, url, {"project": str(project1.pk)})
-    assert response.status_code != 200
+    assert response.status_code == 403
 
 
 def test_member_can_list_own_project_members(db_setup, api_client1, project1, project_profile1):
