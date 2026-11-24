@@ -126,6 +126,8 @@ class Profile(models.Model):
 
     @property
     def num_account_connections(self):
+        if "authusers" in getattr(self, "_prefetched_objects_cache", {}):
+            return len(self.authusers.all())
         return self.authusers.count()
 
 

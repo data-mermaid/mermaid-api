@@ -345,9 +345,13 @@ class ProjectViewSet(BaseApiViewSet):
                 # the only profiles prefetch: members, admins and citations all read it
                 Prefetch(
                     "profiles",
-                    queryset=ProjectProfile.objects.select_related("profile").order_by(
-                        "profile__last_name", "profile__first_name"
-                    ),
+                    queryset=ProjectProfile.objects.select_related("profile")
+                    .prefetch_related(
+                        # read by Profile.full_name via num_account_connections
+                        # for unnamed admins; one query instead of one COUNT each
+                        "profile__authusers"
+                    )
+                    .order_by("profile__last_name", "profile__first_name"),
                     to_attr="profiles_by_name",
                 ),
             )
