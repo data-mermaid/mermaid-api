@@ -23,22 +23,34 @@ class GithubAccessStack(Stack):
                         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
                     },
                     "StringLike": {
-                        # Phase 1 (card 2261): scope the admin role to this repo only. The
-                        # previous "mermaid-*" let any data-mermaid repo's workflow assume
-                        # it. Still allows any ref/PR of mermaid-api so pr.yml (which today
-                        # assumes this role) keeps working.
+                        # Phase 1 (card 2261): scope the admin role to the repos that
+                        # actually deploy through it, instead of the previous
+                        # "mermaid-*", which let any of the ~23 data-mermaid/mermaid-*
+                        # repos (including archived and private ones) assume an
+                        # AdministratorAccess role. mermaid-webapp and mermaid-dash-v2
+                        # run `cdk deploy` into the same account (554812291621) via this
+                        # same role (their CDK_DEPLOY_ROLE secret; neither defines its own
+                        # deploy role), so they must stay on the allowlist or their
+                        # deploys break. classifier/inference/segmentation use their own
+                        # dedicated roles; every other mermaid-* repo touches no AWS.
+                        # Keep this list in sync when a repo starts/stops deploying here.
                         #
-                        # This is not a fork-PR boundary: a fork PR against this repo gets
-                        # the subject "repo:data-mermaid/mermaid-api:pull_request", which
-                        # matches. GitHub's fork-PR limits (no secrets, read-only token by
+                        # Each ":*" allows any ref/PR of that repo, so pr.yml (which today
+                        # assumes this role) keeps working. This is not a fork-PR boundary:
+                        # a fork PR gets subject "repo:<owner>/<repo>:pull_request", which
+                        # matches; GitHub's fork-PR limits (no secrets, read-only token by
                         # default) are what stop a fork from assuming this role.
                         #
                         # Phase 2 (follow-up, AFTER the read-only role below is deployed):
-                        # pin this to ":environment:dev"/":environment:prod" and point
+                        # pin these to ":environment:dev"/":environment:prod" and point
                         # pr.yml at github-pr-readonly-role, so PRs can no longer assume the
                         # admin role. Doing both now would break PR CI, because the
                         # read-only role does not exist until this stack is deployed.
-                        "token.actions.githubusercontent.com:sub": "repo:data-mermaid/mermaid-api:*"
+                        "token.actions.githubusercontent.com:sub": [
+                            "repo:data-mermaid/mermaid-api:*",
+                            "repo:data-mermaid/mermaid-webapp:*",
+                            "repo:data-mermaid/mermaid-dash-v2:*",
+                        ]
                     },
                 },
             ),
