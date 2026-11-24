@@ -587,8 +587,13 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-            encryption=s3.BucketEncryption.S3_MANAGED,
-            enforce_ssl=True,
+            # Intentionally NOT adding encryption/enforce_ssl here (card 2263):
+            # the live mermaid-image-processing bucket has drifted to public
+            # (all four block-public-access flags are False) to serve images to
+            # the UI. Modifying this resource would make CloudFormation re-apply
+            # BLOCK_ALL above and break image serving on dev + test projects in
+            # prod. Reconcile the drift (declare the intended public access) in a
+            # separate change before hardening this bucket.
             cors=[
                 s3.CorsRule(
                     allowed_methods=[
