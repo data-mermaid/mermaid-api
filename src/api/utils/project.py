@@ -434,10 +434,14 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         f"{sample_unit_name}__sample_event__site",
         f"{sample_unit_name}__sample_event__management",
         f"{sample_unit_name}__updated_by",
-    ).prefetch_related("observers__profile")
+    ).prefetch_related(
+        "observers__profile",
+        # full_name COUNTs authusers for nameless profiles; prefetching makes that a cache read
+        "observers__profile__authusers",
+        f"{sample_unit_name}__updated_by__authusers",
+    )
     queryset = queryset.filter(**qry_filter)
 
-    # full_name can COUNT the profile's authusers (nameless profiles); once per profile per protocol
     names = {}
 
     def profile_name(profile):
@@ -530,7 +534,18 @@ def create_collecting_summary(project):
     DEFAULT_MR_ID = "__null__"
     DEFAULT_OBSERVER_NAME = "unnamed observer"
     summary = {}
-    collect_records = CollectRecord.objects.select_related("profile").filter(project=project)
+    # full_name COUNTs authusers for nameless profiles; prefetching makes that a cache read
+    collect_records = (
+        CollectRecord.objects.select_related("profile")
+        .prefetch_related("profile__authusers")
+        .filter(project=project)
+    )
+    names = {}
+
+    def profile_name(profile):
+        if profile.pk not in names:
+            names[profile.pk] = profile.full_name
+        return names[profile.pk]
 
     site_ids = []
     mr_ids = []
@@ -581,7 +596,7 @@ def create_collecting_summary(project):
 
         if profile_id not in summary[site_id]["sample_unit_methods"][protocol]["profile_summary"]:
             summary[site_id]["sample_unit_methods"][protocol]["profile_summary"][profile_id] = {
-                "profile_name": profile.full_name,
+                "profile_name": profile_name(profile),
                 "collect_records": [],
             }
 
