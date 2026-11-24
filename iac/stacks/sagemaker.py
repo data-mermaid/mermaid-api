@@ -583,9 +583,20 @@ class SagemakerStack(cdk.Stack):
             enforce_ssl=True,
             encryption=s3.BucketEncryption.S3_MANAGED,
             # A crashed publish leaves billed, unlisted parts; the rule never
-            # deletes an object or version.
+            # deletes an object or version. Images and masks are read rarely
+            # after a cache fill, so they move to Intelligent-Tiering; a
+            # transition is not a write or a delete, so the denies allow it.
             lifecycle_rules=[
-                s3.LifecycleRule(abort_incomplete_multipart_upload_after=cdk.Duration.days(7))
+                s3.LifecycleRule(abort_incomplete_multipart_upload_after=cdk.Duration.days(7)),
+                s3.LifecycleRule(
+                    prefix="images/",
+                    transitions=[
+                        s3.Transition(
+                            storage_class=s3.StorageClass.INTELLIGENT_TIERING,
+                            transition_after=cdk.Duration.days(0),
+                        )
+                    ],
+                ),
             ],
         )
 
