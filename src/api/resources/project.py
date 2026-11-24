@@ -108,7 +108,7 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
             if profiles is None:
                 profiles = get_profiles(obj)
             else:
-                # Profile.num_account_connections reads this instead of a COUNT query
+                # Profile.has_account reads this instead of querying authusers
                 for pp in profiles:
                     if hasattr(pp, "profile_has_account"):
                         pp.profile._has_account = pp.profile_has_account
@@ -353,7 +353,7 @@ class ProjectViewSet(BaseApiViewSet):
                     "profiles",
                     queryset=ProjectProfile.objects.select_related("profile")
                     .annotate(
-                        # read by Profile.full_name via num_account_connections for
+                        # read by Profile.full_name via has_account for
                         # nameless admins; copied onto pp.profile in _get_profiles
                         profile_has_account=Exists(
                             AuthUser.objects.filter(profile_id=OuterRef("profile_id"))

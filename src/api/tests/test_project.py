@@ -674,11 +674,11 @@ def _assert_nameless_admins(data, expected):
         assert sorted(by_name[name]["project_admins"], key=lambda a: a["id"]) == admins
 
 
-def test_project_showall_nameless_admins_no_authusers_count_per_admin(
+def test_project_showall_nameless_admins_no_authusers_query_per_admin(
     api_client1, project_profile1, django_assert_max_num_queries
 ):
-    """Profile.full_name falls back to num_account_connections for nameless profiles;
-    the profile_has_account annotation means it must not COUNT once per admin."""
+    """Profile.full_name checks has_account for nameless profiles; the
+    profile_has_account annotation means it must not query authusers once per admin."""
     url = "/v1/projects/?showall=true&limit=1000"
 
     expected = _add_projects_with_nameless_admins(0, 1)
@@ -687,7 +687,15 @@ def test_project_showall_nameless_admins_no_authusers_count_per_admin(
     assert response.status_code == 200
     _assert_nameless_admins(response.json(), expected)
     num_queries_1x = len(ctx.captured_queries)
-    assert not any("COUNT" in q["sql"] and "authuser" in q["sql"] for q in ctx.captured_queries)
+    # Any per-profile authuser lookup (COUNT, EXISTS, or a fetch) filters on
+    # authuser.profile_id; the only one allowed is the Exists annotation on the
+    # profiles prefetch. (The JWT auth lookup filters on user_id, not profile_id.)
+    per_profile_authuser_queries = [
+        q["sql"]
+        for q in ctx.captured_queries
+        if '"authuser"."profile_id"' in q["sql"] and 'FROM "project_profile"' not in q["sql"]
+    ]
+    assert per_profile_authuser_queries == []
 
     expected.update(_add_projects_with_nameless_admins(1, 5))
     with django_assert_max_num_queries(num_queries_1x):
