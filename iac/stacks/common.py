@@ -372,6 +372,7 @@ class CommonStack(Stack):
                 removal_policy=RemovalPolicy.RETAIN,
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                encryption=s3.BucketEncryption.S3_MANAGED,
                 enforce_ssl=True,
                 server_access_logs_bucket=vpc_flow_logs_access_logs_bucket,
                 server_access_logs_prefix="athena-results-bucket/",

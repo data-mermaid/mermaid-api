@@ -545,10 +545,8 @@ def suppress_static_site(stack: Stack) -> None:
                     id="AwsSolutions-S1",
                     reason=f"{TODO}: Enable server access logging on the static site bucket.",
                 ),
-                NagPackSuppression(
-                    id="AwsSolutions-S10",
-                    reason=f"{TODO}: Add aws:SecureTransport condition to the bucket policy.",
-                ),
+                # S10 (aws:SecureTransport) is now satisfied: the bucket sets
+                # enforce_ssl=True (card 2263), so the suppression is removed.
             ],
         )
 
