@@ -149,8 +149,8 @@ class SagemakerStack(cdk.Stack):
                     self.security_group.security_group_id,
                 ],
                 # Studio is used to monitor jobs and open MLflow, not to run
-                # code. Hiding apps tidies the UI; the studio role's IAM
-                # policy is what blocks them.
+                # code. Hiding apps and tools tidies the UI; the studio role's
+                # IAM policy is what blocks them.
                 studio_web_portal_settings=sm.CfnDomain.StudioWebPortalSettingsProperty(
                     hidden_app_types=[
                         "JupyterLab",
@@ -158,6 +158,23 @@ class SagemakerStack(cdk.Stack):
                         "JupyterServer",
                         "RStudioServerPro",
                         "Canvas",
+                    ],
+                    hidden_ml_tools=[
+                        "Comet",
+                        "DeepchecksLLMEvaluation",
+                        "Fiddler",
+                        "LakeraGuard",
+                        "Models",
+                        "Pipelines",
+                        "InferenceRecommender",
+                        "Endpoints",
+                        "FeatureStore",
+                        "EmrClusters",
+                        "Projects",
+                        "HyperPodClusters",
+                        "InferenceOptimization",
+                        "ModelEvaluation",
+                        "PerformanceEvaluation",
                     ],
                 ),
             ),
