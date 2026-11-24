@@ -126,8 +126,11 @@ class Profile(models.Model):
 
     @property
     def num_account_connections(self):
-        if "authusers" in getattr(self, "_prefetched_objects_cache", {}):
-            return len(self.authusers.all())
+        # set by ProjectSerializer._get_profiles from an Exists annotation, so the
+        # project list doesn't COUNT once per nameless profile; only 0 vs >0 is known
+        has_account = getattr(self, "_has_account", None)
+        if has_account is not None:
+            return int(has_account)
         return self.authusers.count()
 
 

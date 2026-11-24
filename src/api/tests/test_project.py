@@ -678,7 +678,7 @@ def test_project_showall_nameless_admins_no_authusers_count_per_admin(
     api_client1, project_profile1, django_assert_max_num_queries
 ):
     """Profile.full_name falls back to num_account_connections for nameless profiles;
-    with profile__authusers prefetched it must not COUNT once per admin."""
+    the profile_has_account annotation means it must not COUNT once per admin."""
     url = "/v1/projects/?showall=true&limit=1000"
 
     expected = _add_projects_with_nameless_admins(0, 1)
