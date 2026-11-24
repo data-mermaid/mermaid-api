@@ -853,7 +853,7 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                 reason=f"{ACCEPTED}: Read-only Studio UI access. List, Search and "
                 "logs:DescribeLogGroups have no resource-level ARNs. Other wildcards "
                 "are scoped to Studio domain/user-profile/space/app, training and "
-                "processing jobs, /aws/sagemaker/* log groups, and the account's "
+                "processing jobs and their log groups, and the account's "
                 "MLflow Apps.",
                 applies_to=[
                     "Resource::*",
@@ -864,8 +864,8 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                     "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:training-job/*",
                     "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:processing-job/*",
                     "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:mlflow-app/*",
-                    "Resource::arn:aws:logs:<AWS::Region>:<AWS::AccountId>:log-group:/aws/sagemaker/*",
-                    "Resource::arn:aws:logs:<AWS::Region>:<AWS::AccountId>:log-group:/aws/sagemaker/*:*",
+                    "Resource::arn:aws:logs:<AWS::Region>:<AWS::AccountId>:log-group:/aws/sagemaker/TrainingJobs:*",
+                    "Resource::arn:aws:logs:<AWS::Region>:<AWS::AccountId>:log-group:/aws/sagemaker/ProcessingJobs:*",
                 ],
             ),
         ],

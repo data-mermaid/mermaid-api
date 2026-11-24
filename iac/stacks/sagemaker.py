@@ -384,8 +384,10 @@ class SagemakerStack(cdk.Stack):
                             "logs:FilterLogEvents",
                         ],
                         resources=[
-                            f"{logs_arn}:/aws/sagemaker/*",
-                            f"{logs_arn}:/aws/sagemaker/*:*",
+                            f"{logs_arn}:/aws/sagemaker/TrainingJobs",
+                            f"{logs_arn}:/aws/sagemaker/TrainingJobs:*",
+                            f"{logs_arn}:/aws/sagemaker/ProcessingJobs",
+                            f"{logs_arn}:/aws/sagemaker/ProcessingJobs:*",
                         ],
                     ),
                     iam.PolicyStatement(

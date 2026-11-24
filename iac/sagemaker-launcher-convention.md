@@ -109,7 +109,8 @@ job:
   image: <string>*                 # `<repo-short-name>:<tag>` (launcher
                                    # expands to the full ECR URI based on
                                    # which repo it lives in), OR a full
-                                   # ECR URI (any account/repo) to override.
+                                   # ECR URI to override. The URI must name
+                                   # a mermaid-*-jobs repo in this account.
   entrypoint: <path-in-container>* # Script to run, e.g.
                                    # `scripts/build_feature_bucket.py`.
   instance_type: <ml.* string>*
@@ -193,8 +194,10 @@ Dockerfiles, same repo, different tag prefixes).
 
 The launcher YAML's `job.image` field accepts either a short form
 (`<repo>:<tag>`, where `<repo>` is the bare repo name and the launcher
-expands the ECR URI for that repo) or a full ECR URI (for cross-repo or
-external overrides).
+expands the ECR URI for that repo) or a full ECR URI (for cross-repo
+overrides). The execution role can pull only from `mermaid-*-jobs` repos in
+this account, so a full URI must name one of them. An image in any other
+repo or account needs an IAM change to `SagemakerJobRuntimePolicy` first.
 
 ### Build/push recipe
 
