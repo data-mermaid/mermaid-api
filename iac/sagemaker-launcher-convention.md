@@ -89,6 +89,7 @@ aws sts get-caller-identity   # should end .../dev-mermaid-sagemaker-launcher-ro
 |---|---|
 | Launcher role | `arn:aws:iam::554812291621:role/dev-mermaid-sagemaker-launcher-role` |
 | Job execution role | `arn:aws:iam::554812291621:role/dev-sm-execution-role` |
+| Studio UI role | `arn:aws:iam::554812291621:role/dev-sm-studio-role` (the domain's default; not used by jobs) |
 | Staging bucket | `s3://dev-datamermaid-sm-data` |
 | Classifier ECR | `554812291621.dkr.ecr.us-east-1.amazonaws.com/mermaid-classifier-jobs` |
 | Segmentation ECR | `554812291621.dkr.ecr.us-east-1.amazonaws.com/mermaid-segmentation-jobs` |
@@ -219,8 +220,14 @@ docker push $ACCT.dkr.ecr.$REGION.amazonaws.com/$REPO:$TAG
 
 - The classifier uses the **pyspacer** MLflow app.
 - The segmentation repo uses the **mermaidseg** MLflow app.
-- The execution role (`dev-sm-execution-role`) already has
-  `sagemaker-mlflow:*` on `*`, which covers both apps.
+- The execution role (`dev-sm-execution-role`) has
+  `sagemaker:CallMlflowAppApi` on `mlflow-app/*`, which covers both apps.
+  `sagemaker-mlflow:*` is not enough: it only covers the older MLflow
+  tracking servers.
+- The job also writes artifacts straight to the app's S3 artifact store
+  (`ArtifactStoreUri` from `describe-mlflow-app`). The execution role has
+  read/write on `dev-datamermaid-sm-data` and `mermaid-mlflow`, the two
+  stores in use. A new app with another store needs a new grant.
 - Each repo's docs should embed the relevant app ARN in its example
   `--mlflow-tracking-uri` invocation.
 
