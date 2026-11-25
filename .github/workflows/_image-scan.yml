@@ -1,0 +1,87 @@
+name: Image scan
+
+# Builds the API image and scans it with Trivy (card 2279). Builds the same
+# target CDK deploys (`target="runtime"` in iac/stacks/api.py), loads it locally
+# and never pushes, so it needs no AWS credentials or secrets.
+#
+# Gate (when `gate` is true): fail on a CRITICAL vulnerability that has a fix,
+# or on any secret baked into the image. HIGH and unfixed findings are reported
+# to code scanning but do not fail the job. Accept a finding by adding its ID to
+# a `.trivyignore` at the repo root, with a reason and a review date.
+
+on:
+  workflow_call:
+    inputs:
+      gate:
+        description: Fail on fixable CRITICAL vulnerabilities or secrets.
+        type: boolean
+        default: true
+      sarif-category:
+        description: Code scanning category, so separate callers keep separate alerts.
+        type: string
+        default: trivy-image
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    env:
+      IMAGE: mermaid-api:scan
+      # Installed from the release tarball, not aquasecurity/trivy-action or
+      # setup-trivy (both hijacked in CVE-2026-33634). The sha256 comes from the
+      # release's checksums file, whose sigstore signature was verified against
+      # trivy's release workflow. Bump both together.
+      TRIVY_VERSION: 0.76.2
+      TRIVY_SHA256: bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/trivy.tgz" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  $RUNNER_TEMP/trivy.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/trivy.tgz" -C "$RUNNER_TEMP" trivy
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Build image
+        id: build
+        run: docker build --target runtime -t "$IMAGE" .
+
+      # Runs first and with !cancelled(), so findings reach code scanning even
+      # when a gate step below fails.
+      - name: Scan (all severities, SARIF)
+        id: report
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: trivy image --scanners vuln,secret --format sarif --output trivy-image.sarif "$IMAGE"
+
+      - name: Gate on fixable CRITICAL vulnerabilities
+        if: ${{ !cancelled() && inputs.gate && steps.build.outcome == 'success' }}
+        run: trivy image --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 1 "$IMAGE"
+
+      - name: Gate on secrets
+        if: ${{ !cancelled() && inputs.gate && steps.build.outcome == 'success' }}
+        run: trivy image --scanners secret --exit-code 1 "$IMAGE"
+
+      # Fork PRs get a read-only token, so the upload would fail; the gates
+      # above still run for them.
+      - name: Upload SARIF to code scanning
+        if: >-
+          ${{ !cancelled() && steps.report.outcome == 'success'
+          && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) }}
+        uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934  # v4.39.5
+        with:
+          sarif_file: trivy-image.sarif
+          category: ${{ inputs.sarif-category }}
