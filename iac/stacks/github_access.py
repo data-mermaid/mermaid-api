@@ -23,15 +23,74 @@ class GithubAccessStack(Stack):
                         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
                     },
                     "StringLike": {
-                        "token.actions.githubusercontent.com:sub": "repo:data-mermaid/mermaid-*"
+                        # Phase 1 (card 2261): scope the admin role to the repos that
+                        # actually deploy through it, instead of the previous
+                        # "mermaid-*", which let any of the ~23 data-mermaid/mermaid-*
+                        # repos (including archived and private ones) assume an
+                        # AdministratorAccess role. mermaid-webapp and mermaid-dash-v2
+                        # run `cdk deploy` into the same account (554812291621) via this
+                        # same role (their CDK_DEPLOY_ROLE secret; neither defines its own
+                        # deploy role), so they must stay on the allowlist or their
+                        # deploys break. classifier/inference/segmentation use their own
+                        # dedicated roles; every other mermaid-* repo touches no AWS.
+                        # Keep this list in sync when a repo starts/stops deploying here.
+                        #
+                        # Each ":*" allows any ref/PR of that repo, so pr.yml (which today
+                        # assumes this role) keeps working. This is not a fork-PR boundary:
+                        # a fork PR gets subject "repo:<owner>/<repo>:pull_request", which
+                        # matches; GitHub's fork-PR limits (no secrets, read-only token by
+                        # default) are what stop a fork from assuming this role.
+                        #
+                        # Phase 2 (follow-up, AFTER the read-only role below is deployed):
+                        # pin these to ":environment:dev"/":environment:prod" and point
+                        # pr.yml at github-pr-readonly-role, so PRs can no longer assume the
+                        # admin role. Doing both now would break PR CI, because the
+                        # read-only role does not exist until this stack is deployed.
+                        "token.actions.githubusercontent.com:sub": [
+                            "repo:data-mermaid/mermaid-api:*",
+                            "repo:data-mermaid/mermaid-webapp:*",
+                            "repo:data-mermaid/mermaid-dash-v2:*",
+                        ]
                     },
                 },
             ),
             max_session_duration=Duration.hours(3),
         )
 
+        # NOTE (card 2261): this role runs `cdk deploy` for every stack, so it needs
+        # broad permissions; AdministratorAccess is kept for now. Scoping the permissions
+        # safely means migrating to CDK bootstrap deploy (`cdk deploy --role-arn
+        # <cfn-exec-role>`) so this role only needs sts:AssumeRole on the cdk-* roles - a
+        # separate change that must be validated against a real deploy. The trust narrowing
+        # above already removes the cross-repo assumption vector.
         self.github_access_role.add_managed_policy(
             iam.ManagedPolicy.from_aws_managed_policy_name("AdministratorAccess")
+        )
+
+        # Read-only role for PR CI (pr.yml `cdk synth`/`cdk diff`), created now so a
+        # phase-2 change can point pr.yml at it and pin the admin role away from PRs. Only
+        # ReadOnlyAccess; trusted for the pull_request context.
+        self.github_pr_read_role = iam.Role(
+            self,
+            "GithubPrReadRole",
+            role_name="github-pr-readonly-role",
+            assumed_by=iam.WebIdentityPrincipal(
+                identity_provider=externalOidcProvider.open_id_connect_provider_arn,
+                conditions={
+                    "StringEquals": {
+                        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                    },
+                    "StringLike": {
+                        "token.actions.githubusercontent.com:sub": (
+                            "repo:data-mermaid/mermaid-api:pull_request"
+                        )
+                    },
+                },
+            ),
+            max_session_duration=Duration.hours(1),
+        )
+        self.github_pr_read_role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name("ReadOnlyAccess")
         )
 
         self.inference_image_push_role = self._create_inference_image_push_role(

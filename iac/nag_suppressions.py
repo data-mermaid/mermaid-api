@@ -122,6 +122,21 @@ def suppress_github_access(stack: Stack) -> None:
     )
     _suppress_by_path(
         stack,
+        "GithubPrReadRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: the PR CI role (cdk synth/diff) uses the AWS "
+                "managed ReadOnlyAccess policy by design - read-only, and far less "
+                "privileged than the deploy role it replaces for pull_request runs.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/ReadOnlyAccess",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
         "ClassifierReleaseMlflowPolicy/Resource",
         [
             NagPackSuppression(

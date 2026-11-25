@@ -96,6 +96,8 @@ jobs:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
         with:
+          # Phase 2 (card 2261): switch this to github-pr-readonly-role once that role is
+          # deployed, so PRs stop using the AdministratorAccess deploy role.
           role-to-assume: arn:aws:iam::${{ secrets.CDK_DEFAULT_ACCOUNT }}:role/${{ secrets.DEPLOY_AWS_ROLE }}
           aws-region: us-east-1
           role-skip-session-tagging: true
