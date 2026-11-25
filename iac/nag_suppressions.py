@@ -290,9 +290,11 @@ def suppress_common(stack: Stack) -> None:
     # mermaid-image-processing is intentionally public-read (card 2263): in dev
     # it is the image bucket the API serves to the UI as unsigned URLs, so the
     # objects must be anonymously GET-able. S2 (block public access) is therefore
-    # suppressed by design; access is limited to s3:GetObject via the bucket
-    # policy, and enforce_ssl restricts that to TLS. S10 is satisfied by
-    # enforce_ssl, so it is not suppressed here.
+    # suppressed by design; public access is granted by an out-of-band bucket
+    # policy (not managed by CDK — S3 allows only one policy per bucket and CFN
+    # cannot create one over an existing one), and public ACLs stay blocked.
+    # S10 (TLS-only bucket policy) is suppressed too: we do not attach a managed
+    # policy here, so enforce_ssl is not applied to this bucket.
     _suppress_by_path(
         stack,
         "MermaidImageProcessingBackupBucket/Resource",
@@ -306,8 +308,16 @@ def suppress_common(stack: Stack) -> None:
                 reason=(
                     "Intentional: this bucket serves images to the UI as unsigned "
                     "public URLs (AWS_QUERYSTRING_AUTH=False). Public access is "
-                    "scoped to anonymous s3:GetObject via the bucket policy; "
-                    "public ACLs remain blocked."
+                    "granted by an out-of-band bucket policy; public ACLs remain "
+                    "blocked."
+                ),
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-S10",
+                reason=(
+                    f"{TODO}: Not managing this bucket's policy in CDK (an "
+                    "out-of-band public-read policy already exists), so "
+                    "enforce_ssl is not applied here."
                 ),
             ),
         ],
