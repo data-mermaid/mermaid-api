@@ -9,6 +9,7 @@ from ..exceptions import check_uuid
 from ..models import Management, Project
 from ..permissions import AuthenticatedReadOnlyPermission
 from ..utils import validate_max_year
+from ..utils.project import data_sharing_visible_q
 from .base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
@@ -207,3 +208,9 @@ class ManagementViewSet(ProtectedResourceMixin, BaseApiViewSet):
     permission_classes = [AuthenticatedReadOnlyPermission]
     filterset_class = ManagementFilterSet
     search_fields = ["$name", "$name_secondary", "$project__name", "$est_year"]
+
+    def get_queryset(self):
+        # See SiteViewSet: this global endpoint leaked every non-test project's management
+        # regimes to any logged-in user, ignoring membership and data policy (card 2240).
+        profile = getattr(self.request.user, "profile", None)
+        return super().get_queryset().filter(data_sharing_visible_q(profile)).distinct()
