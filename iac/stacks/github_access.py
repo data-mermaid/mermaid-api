@@ -67,9 +67,18 @@ class GithubAccessStack(Stack):
             iam.ManagedPolicy.from_aws_managed_policy_name("AdministratorAccess")
         )
 
-        # Read-only role for PR CI (pr.yml `cdk synth`/`cdk diff`), created now so a
-        # phase-2 change can point pr.yml at it and pin the admin role away from PRs. Only
-        # ReadOnlyAccess; trusted for the pull_request context.
+        # Read-only role for PR CI (pr.yml `cdk synth`/`cdk diff --method=template`), so PRs
+        # never assume the AdministratorAccess role above. Trusted for the pull_request
+        # context of every repo that runs this CI (mermaid-api, mermaid-webapp,
+        # mermaid-dash-v2 — same allowlist as the admin role). Permissions are a custom
+        # least-privilege policy, NOT the AWS managed ReadOnlyAccess (which would also grant
+        # s3:Get* on the DB-backup buckets, lambda:GetFunction env vars, ssm:GetParameter
+        # SecureStrings, and logs:GetLogEvents to any PR in these repos).
+        #
+        # NOTE: mermaid-webapp's PR job currently runs in `environment: dev`, so its subject
+        # is ":environment:dev", not ":pull_request" — it will only match this role once that
+        # `environment:` is removed from its pr.yml (card 2277, phase-2 step 2). Listing it
+        # here now is harmless.
         self.github_pr_read_role = iam.Role(
             self,
             "GithubPrReadRole",
@@ -81,16 +90,44 @@ class GithubAccessStack(Stack):
                         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
                     },
                     "StringLike": {
-                        "token.actions.githubusercontent.com:sub": (
-                            "repo:data-mermaid/mermaid-api:pull_request"
-                        )
+                        "token.actions.githubusercontent.com:sub": [
+                            "repo:data-mermaid/mermaid-api:pull_request",
+                            "repo:data-mermaid/mermaid-webapp:pull_request",
+                            "repo:data-mermaid/mermaid-dash-v2:pull_request",
+                        ]
                     },
                 },
             ),
             max_session_duration=Duration.hours(1),
         )
-        self.github_pr_read_role.add_managed_policy(
-            iam.ManagedPolicy.from_aws_managed_policy_name("ReadOnlyAccess")
+        # Exactly what `cdk diff --method=template` needs: read deployed templates/stacks
+        # and the CDK bootstrap version parameter. No change-set creation, no bootstrap
+        # deploy-role assumption, no data-plane reads. CloudFormation read actions are not
+        # resource-scopable across all stacks, so they use Resource "*".
+        self.github_pr_read_role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "GithubPrReadPolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=[
+                            "cloudformation:Describe*",
+                            "cloudformation:GetTemplate",
+                            "cloudformation:GetTemplateSummary",
+                            "cloudformation:List*",
+                        ],
+                        resources=["*"],
+                    ),
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["ssm:GetParameter", "ssm:GetParameters"],
+                        resources=[
+                            f"arn:aws:ssm:{self.region}:{self.account}:" "parameter/cdk-bootstrap/*"
+                        ],
+                    ),
+                ],
+            )
         )
 
         self.inference_image_push_role = self._create_inference_image_push_role(

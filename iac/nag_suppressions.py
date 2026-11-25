@@ -122,15 +122,20 @@ def suppress_github_access(stack: Stack) -> None:
     )
     _suppress_by_path(
         stack,
-        "GithubPrReadRole/Resource",
+        "GithubPrReadPolicy/Resource",
         [
             NagPackSuppression(
-                id="AwsSolutions-IAM4",
-                reason=f"{ACCEPTED}: the PR CI role (cdk synth/diff) uses the AWS "
-                "managed ReadOnlyAccess policy by design - read-only, and far less "
-                "privileged than the deploy role it replaces for pull_request runs.",
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: the PR CI role runs `cdk diff --method=template`, "
+                "which reads deployed templates/stacks across all stacks. CloudFormation "
+                "read actions are not resource-scopable, so they use Resource '*'; these "
+                "are read-only Describe/GetTemplate/List actions, no change-set or data "
+                "access.",
                 applies_to=[
-                    "Policy::arn:<AWS::Partition>:iam::aws:policy/ReadOnlyAccess",
+                    "Action::cloudformation:Describe*",
+                    "Action::cloudformation:List*",
+                    "Resource::*",
+                    "Resource::arn:aws:ssm:us-east-1:554812291621:" "parameter/cdk-bootstrap/*",
                 ],
             ),
         ],
