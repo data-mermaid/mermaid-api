@@ -18,9 +18,7 @@ from ...models import (
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_bleaching_percents,
-    to_bleaching_points,
     to_bleaching_se_percents,
-    to_bleaching_se_points,
     to_day,
     to_governance,
     to_join_list,
@@ -343,8 +341,8 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "percent_cover_benthic_category",
                 "percent_cover_life_histories",
                 "include_bleaching",
-                "bleaching_hard_coral",
-                "bleaching_soft_coral",
+                "bleaching_hard_coral_points",
+                "bleaching_soft_coral_points",
                 "percent_bleached_hard_coral",
                 "percent_bleached_soft_coral",
                 "data_policy_benthicpit",
@@ -398,8 +396,8 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("percent_cover_benthic_category", "Percent cover by benthic category"),
         ReportField("percent_cover_life_histories", "Percent cover by life history"),
         ReportField("include_bleaching", "Include bleaching", to_yesno),
-        ReportField("bleaching_hard_coral", "Bleaching hard coral", to_bleaching_points),
-        ReportField("bleaching_soft_coral", "Bleaching soft coral", to_bleaching_points),
+        ReportField("bleaching_hard_coral_points", "Bleaching hard coral points"),
+        ReportField("bleaching_soft_coral_points", "Bleaching soft coral points"),
         ReportField(
             "percent_bleached_hard_coral", "Percent bleached hard coral", to_bleaching_percents
         ),
@@ -444,8 +442,8 @@ class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
                 "bleaching_sample_unit_count",
                 "bleaching_hard_coral_sample_unit_count",
                 "bleaching_soft_coral_sample_unit_count",
-                "bleaching_hard_coral",
-                "bleaching_soft_coral",
+                "bleaching_hard_coral_points",
+                "bleaching_soft_coral_points",
                 "percent_bleached_hard_coral",
                 "percent_bleached_soft_coral",
             ]
@@ -506,8 +504,8 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField(
             "bleaching_soft_coral_sample_unit_count", "Bleaching soft coral sample unit count"
         ),
-        ReportField("bleaching_hard_coral", "Bleaching hard coral", to_bleaching_se_points),
-        ReportField("bleaching_soft_coral", "Bleaching soft coral", to_bleaching_se_points),
+        ReportField("bleaching_hard_coral_points", "Bleaching hard coral points"),
+        ReportField("bleaching_soft_coral_points", "Bleaching soft coral points"),
         ReportField(
             "percent_bleached_hard_coral",
             "Percent bleached hard coral",
