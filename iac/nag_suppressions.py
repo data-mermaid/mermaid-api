@@ -855,6 +855,8 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                     "Action::s3:List*",
                     "Resource::<devDataBucket68DD117A.Arn>/*",
                     "Resource::<devICDatasetsBucket2F2808E0.Arn>/*",
+                    "Resource::<devICDatasetsBucket2F2808E0.Arn>/datasets/*/*/features/*",
+                    "Resource::<devICDatasetsBucket2F2808E0.Arn>/features/*",
                     "Resource::<devSourcesBucket702F0A74.Arn>/*",
                     "Resource::arn:aws:s3:::2605-coralnet-public-sources/*",
                     "Resource::arn:aws:s3:::coral-reef-training/mermaid/*",

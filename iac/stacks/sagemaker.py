@@ -71,6 +71,18 @@ class SagemakerStack(cdk.Stack):
 
         self.ic_datasets_bucket.grant_read(self.sm_execution_role)
 
+        # Jobs write feature vectors. Only PutObject is granted; the bucket's
+        # denies still force If-None-Match and forbid deletes.
+        self.sm_execution_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["s3:PutObject"],
+                resources=[
+                    self.ic_datasets_bucket.arn_for_objects("features/*"),
+                    self.ic_datasets_bucket.arn_for_objects("datasets/*/*/features/*"),
+                ],
+            )
+        )
+
         CfnOutput(
             self,
             f"{self.prefix}ICDatasetsBucketName",
@@ -708,8 +720,8 @@ class SagemakerStack(cdk.Stack):
         and point classifier).
 
         The denies cover object-level API calls for every principal, admins
-        included: PutObject without If-None-Match under images/, datasets/ and
-        taxonomy/, and DeleteObject/DeleteObjectVersion. Bucket configuration
+        included: PutObject without If-None-Match under images/, datasets/,
+        taxonomy/ and features/, and DeleteObject/DeleteObjectVersion. Bucket configuration
         (the policy itself, lifecycle) is protected by IAM and the CDK
         pipeline, not by these denies. CopyObject into a protected prefix
         must also send If-None-Match: * (403 without it, 412 if the key
@@ -755,6 +767,7 @@ class SagemakerStack(cdk.Stack):
                     bucket.arn_for_objects("images/*"),
                     bucket.arn_for_objects("datasets/*"),
                     bucket.arn_for_objects("taxonomy/*"),
+                    bucket.arn_for_objects("features/*"),
                 ],
                 conditions={
                     "Null": {"s3:if-none-match": "true"},
