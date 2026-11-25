@@ -810,6 +810,7 @@ class ArchivedRecord(models.Model):
 class AuditRecord(JSONMixin):
     SUBMIT_RECORD_EVENT_TYPE = 1
     EDIT_RECORD_EVENT_TYPE = 2
+    DELETE_RECORD_EVENT_TYPE = 3
 
     AUDIT_EVENT_TYPES = (
         (
@@ -819,6 +820,10 @@ class AuditRecord(JSONMixin):
         (
             EDIT_RECORD_EVENT_TYPE,
             "Edit Record",
+        ),
+        (
+            DELETE_RECORD_EVENT_TYPE,
+            "Delete Record",
         ),
     )
 
