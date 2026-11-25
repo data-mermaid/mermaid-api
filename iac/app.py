@@ -246,7 +246,6 @@ guardduty_stack = GuardDutyStack(
         "pyspacer-test",
         "sagemaker-studio-554812291621-moo6nyhibza",
         "sagemaker-us-east-1-554812291621",
-        "vpcflowlogs.admin.datamermaid.org",
     ],
 )
 
