@@ -51,7 +51,12 @@ class GithubAccessStack(Stack):
                             "repo:data-mermaid/mermaid-api:environment:dev",
                             "repo:data-mermaid/mermaid-api:environment:prod",
                             "repo:data-mermaid/mermaid-webapp:environment:dev",
+                            # webapp's prod GitHub environment is named "Production"; the
+                            # workflow references it as "production". Allow both casings so
+                            # the prod deploy can assume this role regardless of which the
+                            # OIDC `sub` uses (StringLike is case-sensitive).
                             "repo:data-mermaid/mermaid-webapp:environment:production",
+                            "repo:data-mermaid/mermaid-webapp:environment:Production",
                             "repo:data-mermaid/mermaid-dash-v2:ref:refs/heads/develop",
                             "repo:data-mermaid/mermaid-dash-v2:ref:refs/tags/v*",
                         ]
