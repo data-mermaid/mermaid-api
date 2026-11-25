@@ -1,9 +1,11 @@
 import datetime
+import io
 import os
 
 import pytest
 
 from api.ingest import utils
+from api.ingest.serializers import CollectRecordCSVSerializer
 from api.models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
@@ -212,6 +214,84 @@ def test_fishbelt_ingest_month_day_swap_hint(
     assert (
         "Are you sure month and day numbers are in the right columns?" in date_error["description"]
     )
+
+
+def _repeated_fishbelt_csv(num_rows):
+    with open(os.path.join(csv_data_dir, "fishbelt.csv")) as f:
+        header = f.readline()
+        row = f.readline()
+    return io.StringIO(header + row * num_rows)
+
+
+def test_fishbelt_ingest_schema_lookups_do_not_scale_with_rows(
+    db_setup,
+    project1,
+    profile1,
+    base_project,
+    all_test_fish_attributes,
+    belt_transect_width_5m,
+    fish_size_bin_1,
+    tide2,
+    current2,
+    site1,
+    site2,
+    management1,
+    fish_species3,
+    fish_species4,
+    reef_slope1,
+    relative_depth1,
+    visibility1,
+    monkeypatch,
+):
+    # Regression test for incident #61: resolving CSV headers to schema fields
+    # used to rebuild the base serializer for every cell (rows x columns).
+    counts = {"base_init": 0, "get_schemafields": 0}
+
+    original_init = CollectRecordCSVSerializer.__init__
+    original_get_schemafields = CollectRecordCSVSerializer.get_schemafields
+
+    def counting_init(self, *args, **kwargs):
+        if type(self) is CollectRecordCSVSerializer:
+            counts["base_init"] += 1
+        original_init(self, *args, **kwargs)
+
+    def counting_get_schemafields(self):
+        counts["get_schemafields"] += 1
+        return original_get_schemafields(self)
+
+    monkeypatch.setattr(CollectRecordCSVSerializer, "__init__", counting_init)
+    monkeypatch.setattr(CollectRecordCSVSerializer, "get_schemafields", counting_get_schemafields)
+    monkeypatch.setattr(CollectRecordCSVSerializer, "_base_field_names_cache", {})
+
+    def run_ingest(num_rows):
+        counts["base_init"] = 0
+        counts["get_schemafields"] = 0
+        new_records, output = utils.ingest(
+            protocol=FISHBELT_PROTOCOL,
+            datafile=_repeated_fishbelt_csv(num_rows),
+            project_id=project1.pk,
+            profile_id=profile1.pk,
+            request=None,
+            dry_run=True,
+            clear_existing=False,
+            bulk_validation=False,
+            bulk_submission=False,
+            validation_suppressants=None,
+            serializer_class=None,
+        )
+        assert "errors" not in output
+        assert new_records is not None and len(new_records) == 1
+        assert len(new_records[0].data["obs_belt_fishes"]) == num_rows
+        return dict(counts)
+
+    small_counts = run_ingest(2)
+    large_counts = run_ingest(3000)
+
+    # Base serializer field names are cached per class: built at most once.
+    assert large_counts["base_init"] <= 1
+    # Schema lookups are bounded by the number of distinct headers, not rows.
+    assert large_counts["get_schemafields"] == small_counts["get_schemafields"]
+    assert large_counts["get_schemafields"] < 100
 
 
 def test_benthicpit_ingest(
