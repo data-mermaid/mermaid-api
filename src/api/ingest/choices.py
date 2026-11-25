@@ -1,4 +1,5 @@
 from ..models import (
+    BLEACHING_STATUS_CHOICES,
     BeltTransectWidth,
     BenthicAttribute,
     Current,
@@ -31,6 +32,13 @@ def belt_transect_widths_choices():
 
 def benthic_attributes_choices():
     return [(str(c.id), str(c.name)) for c in BenthicAttribute.objects.all().order_by("name")]
+
+
+INCLUDE_BLEACHING_CHOICES = [(True, "Yes"), (False, "No")]
+
+
+def bleaching_status_choices():
+    return [(str(val), name) for val, name in BLEACHING_STATUS_CHOICES]
 
 
 def current_choices():

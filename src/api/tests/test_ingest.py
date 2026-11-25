@@ -1,19 +1,28 @@
+import csv
 import datetime
+import io
 import os
 
 import pytest
 
 from api.ingest import utils
+from api.ingest.serializers import IncludeBleachingCSVListSerializer
 from api.models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BENTHICPQT_PROTOCOL,
+    BLEACHING_STATUS_FULLY_BLEACHED,
+    BLEACHING_STATUS_NORMAL,
+    BLEACHING_STATUS_PALE,
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
     MACROINVERTEBRATE_PROTOCOL,
     Profile,
 )
+from api.resources.collect_record import CollectRecordSerializer
+from api.submission.validations.validators import IncludeBleachingValidator
+from api.submission.validations.validators.base import ERROR
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 csv_data_dir = os.path.join(BASE_DIR, "tests/ingest_data/")
@@ -266,6 +275,102 @@ def test_benthicpit_ingest(
     assert observations[0].get("attribute") == str(benthic_attribute_2a1.id)
     assert observations[0].get("growth_form") == str(growth_form1.id)
 
+    assert new_record.data.get("include_bleaching") is True
+    assert observations[0].get("bleaching_status") == str(BLEACHING_STATUS_PALE)
+    assert observations[1].get("bleaching_status") == str(BLEACHING_STATUS_NORMAL)
+    assert observations[2].get("bleaching_status") is None
+
+    assert new_records[0].data.get("include_bleaching") is False
+    assert all(
+        obs.get("bleaching_status") is None for obs in new_records[0].data["obs_benthic_pits"]
+    )
+
+
+def _benthicpit_csv_with_include_bleaching(values_by_row):
+    """benthicpit.csv with the Include bleaching value replaced on the given data rows (0-based)."""
+    with open(os.path.join(csv_data_dir, "benthicpit.csv")) as f:
+        rows = list(csv.DictReader(f))
+    for n, value in values_by_row.items():
+        rows[n]["Include bleaching"] = value
+    out = io.StringIO()
+    writer = csv.DictWriter(out, fieldnames=rows[0].keys())
+    writer.writeheader()
+    writer.writerows(rows)
+    out.seek(0)
+    return out
+
+
+def _ingest_benthicpit(datafile, project1, profile1):
+    return utils.ingest(
+        protocol=BENTHICPIT_PROTOCOL,
+        datafile=datafile,
+        project_id=project1.pk,
+        profile_id=profile1.pk,
+        request=None,
+        dry_run=False,
+        clear_existing=False,
+        bulk_validation=False,
+        bulk_submission=False,
+        validation_suppressants=None,
+        serializer_class=None,
+    )
+
+
+def test_benthicpit_ingest_blank_include_bleaching(
+    db_setup,
+    project1,
+    profile1,
+    base_project,
+    all_test_benthic_attributes,
+    tide1,
+    tide2,
+    relative_depth1,
+    benthic_attribute_2a1,
+    growth_form1,
+    site1,
+    management1,
+):
+    # Last 3 rows are the second sample unit
+    datafile = _benthicpit_csv_with_include_bleaching({24: "", 25: "", 26: ""})
+    new_records, _ = _ingest_benthicpit(datafile, project1, profile1)
+
+    assert new_records is not None and len(new_records) == 2
+    blank_record = new_records[1]
+    assert "include_bleaching" in blank_record.data
+    assert blank_record.data["include_bleaching"] is None
+
+    validator = IncludeBleachingValidator(include_bleaching_path="data.include_bleaching")
+    result = validator(CollectRecordSerializer(blank_record).data)
+    assert result.status == ERROR
+    assert result.code == IncludeBleachingValidator.REQUIRED
+
+
+def test_benthicpit_ingest_mixed_include_bleaching(
+    db_setup,
+    project1,
+    profile1,
+    base_project,
+    all_test_benthic_attributes,
+    tide1,
+    tide2,
+    relative_depth1,
+    benthic_attribute_2a1,
+    growth_form1,
+    site1,
+    management1,
+):
+    datafile = _benthicpit_csv_with_include_bleaching({25: "No"})
+    new_records, output = _ingest_benthicpit(datafile, project1, profile1)
+
+    assert new_records is None
+    errors = output["errors"]
+    # Every row of the second sample unit (CSV rows 26-28) is flagged
+    assert [e["$row_number"] for e in errors] == [26, 27, 28]
+    for e in errors:
+        assert e["data__include_bleaching"]["description"] == [
+            IncludeBleachingCSVListSerializer.MIXED_INCLUDE_BLEACHING
+        ]
+
 
 def test_bleaching_ingest(
     db_setup,
@@ -404,6 +509,16 @@ def test_benthiclit_ingest(
     assert observations[0].get("attribute") == str(benthic_attribute_3.id)
     assert observations[0].get("growth_form") is None
     assert observations[0].get("length") == 322
+
+    assert new_record.data.get("include_bleaching") is True
+    assert observations[0].get("bleaching_status") is None
+    assert observations[2].get("bleaching_status") == str(BLEACHING_STATUS_FULLY_BLEACHED)
+    assert observations[3].get("bleaching_status") == str(BLEACHING_STATUS_NORMAL)
+
+    assert new_records[0].data.get("include_bleaching") is False
+    assert all(
+        obs.get("bleaching_status") is None for obs in new_records[0].data["obs_benthic_lits"]
+    )
 
 
 def test_habitatcomplexity_ingest(

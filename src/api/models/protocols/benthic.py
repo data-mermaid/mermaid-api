@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib.gis.db import models
 from django.utils.translation import gettext as _
 
@@ -165,9 +167,40 @@ class BenthicAttributeGrowthFormLifeHistory(BaseModel):
         )
 
 
+# Top-level benthic categories that take a bleaching status
+BLEACHING_CATEGORY_HARD_CORAL = "Hard coral"
+BLEACHING_CATEGORY_SOFT_CORAL = "Soft coral"
+BLEACHING_CATEGORIES = (BLEACHING_CATEGORY_HARD_CORAL, BLEACHING_CATEGORY_SOFT_CORAL)
+
+BLEACHING_STATUS_NORMAL = 0
+BLEACHING_STATUS_PALE = 1
+BLEACHING_STATUS_PARTIALLY_BLEACHED = 2
+BLEACHING_STATUS_FULLY_BLEACHED = 3
+BLEACHING_STATUS_RECENT_MORTALITY = 4
+BLEACHING_STATUS_CHOICES = (
+    (BLEACHING_STATUS_NORMAL, "normal"),
+    (BLEACHING_STATUS_PALE, "pale"),
+    (BLEACHING_STATUS_PARTIALLY_BLEACHED, "partially_bleached"),
+    (BLEACHING_STATUS_FULLY_BLEACHED, "fully_bleached"),
+    (BLEACHING_STATUS_RECENT_MORTALITY, "recent_bleaching_mortality"),
+)
+BLEACHING_BLEACHED_KEY = "bleached"
+# Tabular order of SU and SE percent_bleached_* keys: total bleached first, then statuses by val
+BLEACHING_PERCENT_KEYS = (
+    BLEACHING_BLEACHED_KEY,
+    *(name for _, name in BLEACHING_STATUS_CHOICES),
+)
+
+
+BLEACHING_STATUS_CHOICES_UPDATED_ON = datetime.datetime(
+    2026, 11, 25, 0, 0, 0, 0, tzinfo=datetime.UTC
+)
+
+
 class BenthicLIT(TransectMethod):
     protocol = BENTHICLIT_PROTOCOL
     project_lookup = "transect__sample_event__site__project"
+    include_bleaching = models.BooleanField(default=False)
 
     transect = models.OneToOneField(
         BenthicTransect,
@@ -194,6 +227,9 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     length = models.PositiveSmallIntegerField(verbose_name=_("length (cm)"))
+    bleaching_status = models.PositiveSmallIntegerField(
+        choices=BLEACHING_STATUS_CHOICES, null=True, blank=True
+    )
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -208,6 +244,7 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
 class BenthicPIT(TransectMethod):
     protocol = BENTHICPIT_PROTOCOL
     project_lookup = "transect__sample_event__site__project"
+    include_bleaching = models.BooleanField(default=False)
 
     transect = models.OneToOneField(
         BenthicTransect,
@@ -246,6 +283,9 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     interval = models.DecimalField(max_digits=7, decimal_places=2)
+    bleaching_status = models.PositiveSmallIntegerField(
+        choices=BLEACHING_STATUS_CHOICES, null=True, blank=True
+    )
     notes = models.TextField(blank=True)
 
     class Meta:
