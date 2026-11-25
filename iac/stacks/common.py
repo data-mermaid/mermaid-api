@@ -588,12 +588,18 @@ class CommonStack(Stack):
             # This bucket is intentionally public-read (card 2263). In dev,
             # ic_bucket_name resolves to this bucket, and the API serves images
             # to the UI as unsigned URLs (AWS_QUERYSTRING_AUTH = False), so the
-            # objects must be anonymously GET-able. The live bucket was public
-            # via an out-of-band bucket policy while the CDK construct still
-            # declared BLOCK_ALL; that drift is reconciled here so a future
-            # deploy cannot silently re-block it and break dev + prod-test image
-            # viewing. Public ACLs stay blocked — access is granted only by the
-            # explicit GetObject policy added below, mirroring the live policy.
+            # objects must be anonymously GET-able. The live bucket is public via
+            # an out-of-band bucket policy while the CDK construct declared
+            # BLOCK_ALL. We reconcile ONLY the block-public-access settings here
+            # so a future deploy cannot silently re-block the bucket and break
+            # dev + prod-test image viewing. We deliberately do NOT add a managed
+            # bucket policy (no explicit statement, no enforce_ssl): S3 allows
+            # only one policy per bucket, and CloudFormation refuses to create
+            # one when an out-of-band policy already exists ("The bucket policy
+            # already exists"), which fails the whole stack. The public-read
+            # policy therefore stays out-of-band; the block settings below are
+            # what make the public access survive deploys. Public ACLs stay
+            # blocked.
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess(
                 block_public_acls=True,
@@ -602,7 +608,6 @@ class CommonStack(Stack):
                 restrict_public_buckets=False,
             ),
             encryption=s3.BucketEncryption.S3_MANAGED,
-            enforce_ssl=True,
             cors=[
                 s3.CorsRule(
                     allowed_methods=[
@@ -615,23 +620,6 @@ class CommonStack(Stack):
                     max_age=3000,
                 ),
             ],
-        )
-
-        # Anonymous read of image objects, mirroring the live bucket policy so
-        # CDK is authoritative (card 2263). enforce_ssl above adds a separate
-        # Deny for aws:SecureTransport=false scoped to AWS principals; it does
-        # not restrict the anonymous GET below, matching prior live behavior.
-        self.image_processing_bucket.add_to_resource_policy(
-            iam.PolicyStatement(
-                sid="PublicReadForGetBucketObjects",
-                effect=iam.Effect.ALLOW,
-                # StarPrincipal ("*"), not AnyPrincipal ({"AWS": "*"}): the UI
-                # fetches images with unsigned/anonymous requests, which require
-                # the bare "*" principal. This mirrors the live bucket policy.
-                principals=[iam.StarPrincipal()],
-                actions=["s3:GetObject"],
-                resources=[self.image_processing_bucket.arn_for_objects("*")],
-            )
         )
 
         # KMS Key for encrypting logs
