@@ -122,6 +122,26 @@ def suppress_github_access(stack: Stack) -> None:
     )
     _suppress_by_path(
         stack,
+        "GithubPrReadPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: the PR CI role runs `cdk diff --method=template`, "
+                "which reads deployed templates/stacks across all stacks. CloudFormation "
+                "read actions are not resource-scopable, so they use Resource '*'; these "
+                "are read-only Describe/GetTemplate/List actions, no change-set or data "
+                "access.",
+                applies_to=[
+                    "Action::cloudformation:Describe*",
+                    "Action::cloudformation:List*",
+                    "Resource::*",
+                    "Resource::arn:aws:ssm:us-east-1:554812291621:" "parameter/cdk-bootstrap/*",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
         "ClassifierReleaseMlflowPolicy/Resource",
         [
             NagPackSuppression(
@@ -274,7 +294,6 @@ def suppress_common(stack: Stack) -> None:
         "MermaidApiBackupBucket/Resource",
         "MermaidApiConfigBucket/Resource",
         "MermaidApiDataBucket/Resource",
-        "MermaidImageProcessingBackupBucket/Resource",
     ]
     for bucket_path in s3_bucket_paths:
         _suppress_by_path(
@@ -285,12 +304,44 @@ def suppress_common(stack: Stack) -> None:
                     id="AwsSolutions-S1",
                     reason=f"{TODO}: Enable server access logging on this S3 bucket.",
                 ),
-                NagPackSuppression(
-                    id="AwsSolutions-S10",
-                    reason=f"{TODO}: Add aws:SecureTransport condition to the bucket policy.",
-                ),
             ],
         )
+
+    # mermaid-image-processing is intentionally public-read (card 2263): in dev
+    # it is the image bucket the API serves to the UI as unsigned URLs, so the
+    # objects must be anonymously GET-able. S2 (block public access) is therefore
+    # suppressed by design; public access is granted by an out-of-band bucket
+    # policy (not managed by CDK — S3 allows only one policy per bucket and CFN
+    # cannot create one over an existing one), and public ACLs stay blocked.
+    # S10 (TLS-only bucket policy) is suppressed too: we do not attach a managed
+    # policy here, so enforce_ssl is not applied to this bucket.
+    _suppress_by_path(
+        stack,
+        "MermaidImageProcessingBackupBucket/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-S1",
+                reason=f"{TODO}: Enable server access logging on this S3 bucket.",
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-S2",
+                reason=(
+                    "Intentional: this bucket serves images to the UI as unsigned "
+                    "public URLs (AWS_QUERYSTRING_AUTH=False). Public access is "
+                    "granted by an out-of-band bucket policy; public ACLs remain "
+                    "blocked."
+                ),
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-S10",
+                reason=(
+                    f"{TODO}: Not managing this bucket's policy in CDK (an "
+                    "out-of-band public-read policy already exists), so "
+                    "enforce_ssl is not applied here."
+                ),
+            ),
+        ],
+    )
 
     # --- KMS ---
     _suppress_by_path(
@@ -545,10 +596,8 @@ def suppress_static_site(stack: Stack) -> None:
                     id="AwsSolutions-S1",
                     reason=f"{TODO}: Enable server access logging on the static site bucket.",
                 ),
-                NagPackSuppression(
-                    id="AwsSolutions-S10",
-                    reason=f"{TODO}: Add aws:SecureTransport condition to the bucket policy.",
-                ),
+                # S10 (aws:SecureTransport) is now satisfied: the bucket sets
+                # enforce_ssl=True (card 2263), so the suppression is removed.
             ],
         )
 
@@ -794,22 +843,7 @@ def suppress_api(stack: Stack, env_id: str) -> None:
 
 
 def suppress_sagemaker(stack: Stack, prefix: str) -> None:
-    # --- SageMaker Execution Role ---
-    _suppress_by_path(
-        stack,
-        f"{prefix}SagemakerExecutionRole/Resource",
-        [
-            NagPackSuppression(
-                id="AwsSolutions-IAM4",
-                reason=f"{TODO}: Replace AmazonSageMakerFullAccess and "
-                "SageMakerStudioFullAccess with scoped customer-managed policies.",
-                applies_to=[
-                    "Policy::arn:aws:iam::aws:policy/AmazonSageMakerFullAccess",
-                    "Policy::arn:aws:iam::aws:policy/SageMakerStudioFullAccess",
-                ],
-            ),
-        ],
-    )
+    # --- SageMaker Execution Role (jobs + MLflow Apps) ---
     _suppress_by_path(
         stack,
         f"{prefix}SagemakerExecutionRole/DefaultPolicy/Resource",
@@ -817,7 +851,7 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
             NagPackSuppression(
                 id="AwsSolutions-IAM5",
                 reason=f"{ACCEPTED}: Wildcard permissions are generated by CDK "
-                "grant helpers and scoped to specific bucket ARNs.",
+                "grant helpers and scoped to specific bucket ARNs and prefixes.",
                 applies_to=[
                     "Action::s3:Abort*",
                     "Action::s3:DeleteObject*",
@@ -825,45 +859,68 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                     "Action::s3:GetObject*",
                     "Action::s3:List*",
                     "Resource::<devDataBucket68DD117A.Arn>/*",
+                    "Resource::<devICDatasetsBucket2F2808E0.Arn>/*",
+                    "Resource::<devICDatasetsBucket2F2808E0.Arn>/datasets/*/*/features/*",
+                    "Resource::<devICDatasetsBucket2F2808E0.Arn>/features/*",
                     "Resource::<devSourcesBucket702F0A74.Arn>/*",
-                    "Resource::arn:aws:s3:::2310-coralnet-public-sources/*",
                     "Resource::arn:aws:s3:::2605-coralnet-public-sources/*",
-                    "Resource::arn:aws:s3:::mermaid-config/*",
-                    "Resource::arn:aws:s3:::mermaid-image-processing/*",
-                    "Resource::arn:aws:s3:::pyspacer-test/*",
+                    "Resource::arn:aws:s3:::coral-reef-training/mermaid/*",
+                    "Resource::arn:aws:s3:::mermaid-config/classifier/*",
+                    "Resource::arn:aws:s3:::mermaid-mlflow/*",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "SagemakerJobRuntimePolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: ecr:GetAuthorizationToken and "
+                "cloudwatch:PutMetricData have no resource-level ARNs (PutMetricData "
+                "is limited by a namespace condition). Other wildcards are scoped to "
+                "the mermaid-*-jobs ECR repos, the SageMaker job log groups, the "
+                "account's MLflow Apps, and the Hugging Face token secret.",
+                applies_to=[
+                    "Resource::*",
+                    "Resource::arn:aws:ecr:<AWS::Region>:<AWS::AccountId>:repository/mermaid-*-jobs",
+                    "Resource::arn:aws:logs:<AWS::Region>:<AWS::AccountId>:log-group:/aws/sagemaker/TrainingJobs:*",
+                    "Resource::arn:aws:logs:<AWS::Region>:<AWS::AccountId>:log-group:/aws/sagemaker/ProcessingJobs:*",
+                    "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:mlflow-app/*",
+                    "Resource::arn:aws:secretsmanager:<AWS::Region>:<AWS::AccountId>:secret:mermaid-segmentation/hf-token-*",
                 ],
             ),
         ],
     )
 
-    # --- Inline IAM policies ---
-    for policy_path in [
-        "MlflowRolePolicy/Resource",
-        "SagemakerStartSessionPolicy/Resource",
-        "GlueSessionPolicy/Resource",
-        "SagemakerPassSelfPolicy/Resource",
-    ]:
-        _suppress_by_path(
-            stack,
-            policy_path,
-            [
-                NagPackSuppression(
-                    id="AwsSolutions-IAM5",
-                    reason=f"{ACCEPTED}: SageMaker, MLflow, and Glue wildcards are "
-                    "required for interactive notebook sessions.",
-                    applies_to=[
-                        "Action::glue:*",
-                        "Action::sagemaker-mlflow:*",
-                        "Action::sagemaker:*",
-                        "Resource::*",
-                        "Resource::arn:aws:glue:<AWS::Region>:<AWS::AccountId>:session/*",
-                        "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:domain/*",
-                        "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:space/*",
-                        "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:user-profile/*",
-                    ],
-                ),
-            ],
-        )
+    # --- SageMaker Studio UI role ---
+    _suppress_by_path(
+        stack,
+        "SagemakerStudioUiPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: Read-only Studio UI access. List, Search and "
+                "logs:DescribeLogGroups have no resource-level ARNs. Other wildcards "
+                "are scoped to Studio domain/user-profile/space/app, training and "
+                "processing jobs and their log groups, and the account's "
+                "MLflow Apps.",
+                applies_to=[
+                    "Resource::*",
+                    "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:domain/*",
+                    "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:user-profile/*",
+                    "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:space/*",
+                    "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:app/*",
+                    "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:training-job/*",
+                    "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:processing-job/*",
+                    "Resource::arn:aws:sagemaker:<AWS::Region>:<AWS::AccountId>:mlflow-app/*",
+                    "Resource::arn:aws:logs:<AWS::Region>:<AWS::AccountId>:log-group:/aws/sagemaker/TrainingJobs:*",
+                    "Resource::arn:aws:logs:<AWS::Region>:<AWS::AccountId>:log-group:/aws/sagemaker/ProcessingJobs:*",
+                ],
+            ),
+        ],
+    )
 
     # --- Shared Mermaid SageMaker launcher role's inline policies ---
     # ECR / SageMaker / Logs / S3 wildcards are scoped to specific repos
@@ -912,6 +969,7 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
     for bucket_path in [
         f"{prefix}SourcesBucket/Resource",
         f"{prefix}DataBucket/Resource",
+        f"{prefix}ICDatasetsBucket/Resource",
     ]:
         _suppress_by_path(
             stack,

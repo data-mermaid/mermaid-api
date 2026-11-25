@@ -1,7 +1,7 @@
 function diff(){
 	echo "Run cdk diff"
 	set -o pipefail
-	cdk diff 2>&1 | tee /tmp/cdk-diff.log
+	cdk diff --method=template 2>&1 | tee /tmp/cdk-diff.log
 	exitCode=${?}
 	set +o pipefail
 
