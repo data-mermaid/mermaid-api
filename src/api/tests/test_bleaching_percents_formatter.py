@@ -8,9 +8,9 @@ def test_to_bleaching_percents_orders_keys_by_status_val():
         "pale": 10.0,
         "normal": 50.0,
         "bleached": 50.0,
-        "fully bleached": 20.0,
-        "partially bleached": 15.0,
-        "recent bleaching mortality": 5.0,
+        "fully_bleached": 20.0,
+        "partially_bleached": 15.0,
+        "recent_bleaching_mortality": 5.0,
     }
 
     result = to_bleaching_percents(value, None, None, None)
@@ -19,9 +19,9 @@ def test_to_bleaching_percents_orders_keys_by_status_val():
         "bleached",
         "normal",
         "pale",
-        "partially bleached",
-        "fully bleached",
-        "recent bleaching mortality",
+        "partially_bleached",
+        "fully_bleached",
+        "recent_bleaching_mortality",
     ]
     assert result["normal"] == 50.0
 
@@ -40,9 +40,9 @@ def test_bleaching_percents_csv_column_order():
         "percent_bleached_hard_coral_bleached",
         "percent_bleached_hard_coral_normal",
         "percent_bleached_hard_coral_pale",
-        "percent_bleached_hard_coral_partially bleached",
-        "percent_bleached_hard_coral_fully bleached",
-        "percent_bleached_hard_coral_recent bleaching mortality",
+        "percent_bleached_hard_coral_partially_bleached",
+        "percent_bleached_hard_coral_fully_bleached",
+        "percent_bleached_hard_coral_recent_bleaching_mortality",
     ]
 
 
@@ -54,8 +54,8 @@ def test_to_bleaching_se_percents_has_no_bleached_key():
     assert list(result) == [
         "normal",
         "pale",
-        "partially bleached",
-        "fully bleached",
-        "recent bleaching mortality",
+        "partially_bleached",
+        "fully_bleached",
+        "recent_bleaching_mortality",
     ]
-    assert result["partially bleached"] is None
+    assert result["partially_bleached"] is None

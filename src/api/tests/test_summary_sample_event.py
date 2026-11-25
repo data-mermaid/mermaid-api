@@ -164,7 +164,7 @@ def test_summary_sample_event_benthicpit_bleaching(
     hard = benthicpit["percent_bleached_hard_coral"]
     assert hard["pale"] == 50.0
     assert hard["normal"] == 50.0
-    assert hard["fully bleached"] == 0.0
+    assert hard["fully_bleached"] == 0.0
     # SE objects have no combined `bleached` key, and total coral is not reported
     assert "bleached" not in hard
     assert "percent_bleached_total_coral" not in benthicpit

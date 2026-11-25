@@ -24,7 +24,7 @@ bleaching_categories_sql = ", ".join(f"'{name}'" for name in BLEACHING_CATEGORIE
 
 def bleaching_amount_key_sql(name_sql, amount):
     """SQL for a bleaching_{hard,soft}_coral key from a status name; mirrors bleaching_amount_keys."""
-    return f"replace({name_sql}, ' ', '_') || '_{amount}'"
+    return f"{name_sql} || '_{amount}'"
 
 
 def bleaching_su_columns_sql():

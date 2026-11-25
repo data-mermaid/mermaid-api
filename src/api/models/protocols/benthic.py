@@ -180,11 +180,10 @@ BLEACHING_STATUS_RECENT_MORTALITY = 4
 BLEACHING_STATUS_CHOICES = (
     (BLEACHING_STATUS_NORMAL, "normal"),
     (BLEACHING_STATUS_PALE, "pale"),
-    (BLEACHING_STATUS_PARTIALLY_BLEACHED, "partially bleached"),
-    (BLEACHING_STATUS_FULLY_BLEACHED, "fully bleached"),
-    (BLEACHING_STATUS_RECENT_MORTALITY, "recent bleaching mortality"),
+    (BLEACHING_STATUS_PARTIALLY_BLEACHED, "partially_bleached"),
+    (BLEACHING_STATUS_FULLY_BLEACHED, "fully_bleached"),
+    (BLEACHING_STATUS_RECENT_MORTALITY, "recent_bleaching_mortality"),
 )
-# Key in percent_bleached_* objects for the sum of all statuses other than normal
 BLEACHING_BLEACHED_KEY = "bleached"
 # Tabular order of SE percent_bleached_* keys: statuses by val. SE objects have no `bleached` key.
 BLEACHING_SE_PERCENT_KEYS = tuple(name for _, name in BLEACHING_STATUS_CHOICES)
@@ -194,10 +193,10 @@ BLEACHING_PERCENT_KEYS = (BLEACHING_BLEACHED_KEY, *BLEACHING_SE_PERCENT_KEYS)
 
 def bleaching_amount_keys(amount):
     """
-    Keys of the bleaching_{hard,soft}_coral summary objects, in status order: the status name with
-    underscores plus the amount unit, "points" (PIT) or "length" (LIT, cm). E.g. "fully_bleached_points".
+    Keys of the bleaching_{hard,soft}_coral summary objects, in status order: the status name
+    plus the amount unit, "points" (PIT) or "length" (LIT, cm). E.g. "fully_bleached_points".
     """
-    return tuple(f"{name.replace(' ', '_')}_{amount}" for _, name in BLEACHING_STATUS_CHOICES)
+    return tuple(f"{name}_{amount}" for _, name in BLEACHING_STATUS_CHOICES)
 
 
 # Suffix of the sample event keys counting the sample units each status was recorded in
@@ -213,7 +212,7 @@ def bleaching_se_amount_keys(amount):
 
 
 BLEACHING_STATUS_CHOICES_UPDATED_ON = datetime.datetime(
-    2026, 10, 21, 0, 0, 0, 0, tzinfo=datetime.UTC
+    2026, 11, 25, 0, 0, 0, 0, tzinfo=datetime.UTC
 )
 
 
