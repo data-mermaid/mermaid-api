@@ -201,8 +201,10 @@ def get_latest_object(bucket, prefix=None, aws_access_key_id=None, aws_secret_ac
 
 
 def get_presigned_url(
-    bucket, key, expiration=604_800, aws_access_key_id=None, aws_secret_access_key=None
+    bucket, key, expiration=86_400, aws_access_key_id=None, aws_secret_access_key=None
 ):
+    # L6 (card 2260): default TTL shortened from 7 days to 1 day. A presigned URL is a
+    # bearer link (e.g. emailed report), so anyone with the link had 7 days of access.
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
