@@ -372,6 +372,7 @@ class CommonStack(Stack):
                 removal_policy=RemovalPolicy.RETAIN,
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                encryption=s3.BucketEncryption.S3_MANAGED,
                 enforce_ssl=True,
                 server_access_logs_bucket=vpc_flow_logs_access_logs_bucket,
                 server_access_logs_prefix="athena-results-bucket/",
@@ -508,6 +509,10 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            # Encrypt at rest + reject non-TLS requests (card 2263); matches the
+            # flow-logs/athena/alb-logs buckets.
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
         )
 
         self.config_bucket = s3.Bucket(
@@ -517,6 +522,8 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
         )
 
         # Shared (dev/prod) ECR repo for the pyspacer inference Lambda image.
@@ -555,6 +562,8 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
             lifecycle_rules=[
                 # Rules for cleaning up report files after 14 days.
                 s3.LifecycleRule(
@@ -576,8 +585,24 @@ class CommonStack(Stack):
             id="MermaidImageProcessingBackupBucket",
             bucket_name="mermaid-image-processing",
             removal_policy=RemovalPolicy.RETAIN,
+            # This bucket is intentionally public-read (card 2263). In dev,
+            # ic_bucket_name resolves to this bucket, and the API serves images
+            # to the UI as unsigned URLs (AWS_QUERYSTRING_AUTH = False), so the
+            # objects must be anonymously GET-able. The live bucket was public
+            # via an out-of-band bucket policy while the CDK construct still
+            # declared BLOCK_ALL; that drift is reconciled here so a future
+            # deploy cannot silently re-block it and break dev + prod-test image
+            # viewing. Public ACLs stay blocked — access is granted only by the
+            # explicit GetObject policy added below, mirroring the live policy.
             public_read_access=False,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            block_public_access=s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=False,
+                restrict_public_buckets=False,
+            ),
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
             cors=[
                 s3.CorsRule(
                     allowed_methods=[
@@ -590,6 +615,23 @@ class CommonStack(Stack):
                     max_age=3000,
                 ),
             ],
+        )
+
+        # Anonymous read of image objects, mirroring the live bucket policy so
+        # CDK is authoritative (card 2263). enforce_ssl above adds a separate
+        # Deny for aws:SecureTransport=false scoped to AWS principals; it does
+        # not restrict the anonymous GET below, matching prior live behavior.
+        self.image_processing_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="PublicReadForGetBucketObjects",
+                effect=iam.Effect.ALLOW,
+                # StarPrincipal ("*"), not AnyPrincipal ({"AWS": "*"}): the UI
+                # fetches images with unsigned/anonymous requests, which require
+                # the bare "*" principal. This mirrors the live bucket policy.
+                principals=[iam.StarPrincipal()],
+                actions=["s3:GetObject"],
+                resources=[self.image_processing_bucket.arn_for_objects("*")],
+            )
         )
 
         # KMS Key for encrypting logs
