@@ -94,11 +94,11 @@ jobs:
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708  # v5.1.1
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
-          DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
         with:
-          # Phase 2 (card 2261): switch this to github-pr-readonly-role once that role is
-          # deployed, so PRs stop using the AdministratorAccess deploy role.
-          role-to-assume: arn:aws:iam::${{ secrets.CDK_DEFAULT_ACCOUNT }}:role/${{ secrets.DEPLOY_AWS_ROLE }}
+          # PR CI assumes the least-privilege read-only role (card 2261 Phase 2), not the
+          # AdministratorAccess deploy role. cdk_diff.sh runs `cdk diff --method=template`,
+          # which only reads templates/SSM. Role name is non-secret; account from the secret.
+          role-to-assume: arn:aws:iam::${{ secrets.CDK_DEFAULT_ACCOUNT }}:role/github-pr-readonly-role
           aws-region: us-east-1
           role-skip-session-tagging: true
 

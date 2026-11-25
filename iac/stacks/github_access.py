@@ -35,21 +35,25 @@ class GithubAccessStack(Stack):
                         # dedicated roles; every other mermaid-* repo touches no AWS.
                         # Keep this list in sync when a repo starts/stops deploying here.
                         #
-                        # Each ":*" allows any ref/PR of that repo, so pr.yml (which today
-                        # assumes this role) keeps working. This is not a fork-PR boundary:
-                        # a fork PR gets subject "repo:<owner>/<repo>:pull_request", which
-                        # matches; GitHub's fork-PR limits (no secrets, read-only token by
-                        # default) are what stop a fork from assuming this role.
-                        #
-                        # Phase 2 (follow-up, AFTER the read-only role below is deployed):
-                        # pin these to ":environment:dev"/":environment:prod" and point
-                        # pr.yml at github-pr-readonly-role, so PRs can no longer assume the
-                        # admin role. Doing both now would break PR CI, because the
-                        # read-only role does not exist until this stack is deployed.
+                        # Phase 2 (card 2261): each subject is pinned to the deploy job's
+                        # actual OIDC `sub`, so a PR (subject "...:pull_request") can no
+                        # longer assume this AdministratorAccess role — PR CI uses
+                        # github-pr-readonly-role instead. The subject differs per repo
+                        # because of how each deploy job is configured:
+                        #   - mermaid-api / mermaid-webapp set a GitHub `environment:` on the
+                        #     deploy job, so the subject is "...:environment:<env>".
+                        #     (webapp's prod environment is named "production", not "prod".)
+                        #   - mermaid-dash-v2's deploy job sets no GitHub environment (its
+                        #     `environment` input is only a vite/name string), so the subject
+                        #     is "...:ref:<git ref>": develop for dev, a v*.*.* tag for prod.
+                        # Update a repo's entry here if it changes how its deploy job runs.
                         "token.actions.githubusercontent.com:sub": [
-                            "repo:data-mermaid/mermaid-api:*",
-                            "repo:data-mermaid/mermaid-webapp:*",
-                            "repo:data-mermaid/mermaid-dash-v2:*",
+                            "repo:data-mermaid/mermaid-api:environment:dev",
+                            "repo:data-mermaid/mermaid-api:environment:prod",
+                            "repo:data-mermaid/mermaid-webapp:environment:dev",
+                            "repo:data-mermaid/mermaid-webapp:environment:production",
+                            "repo:data-mermaid/mermaid-dash-v2:ref:refs/heads/develop",
+                            "repo:data-mermaid/mermaid-dash-v2:ref:refs/tags/v*",
                         ]
                     },
                 },
@@ -123,7 +127,7 @@ class GithubAccessStack(Stack):
                         effect=iam.Effect.ALLOW,
                         actions=["ssm:GetParameter", "ssm:GetParameters"],
                         resources=[
-                            f"arn:aws:ssm:{self.region}:{self.account}:" "parameter/cdk-bootstrap/*"
+                            f"arn:aws:ssm:{self.region}:{self.account}:parameter/cdk-bootstrap/*"
                         ],
                     ),
                 ],
@@ -168,9 +172,7 @@ class GithubAccessStack(Stack):
             max_session_duration=Duration.hours(1),
         )
 
-        repo_arn = (
-            f"arn:aws:ecr:{self.region}:{self.account}:" "repository/mermaid-inference-pyspacer"
-        )
+        repo_arn = f"arn:aws:ecr:{self.region}:{self.account}:repository/mermaid-inference-pyspacer"
         role.attach_inline_policy(
             iam.Policy(
                 self,
