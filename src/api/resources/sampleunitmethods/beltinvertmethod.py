@@ -1,9 +1,7 @@
 from decimal import Decimal
 
-from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
-from rest_framework import serializers, status
-from rest_framework.response import Response
+from rest_framework import serializers
 
 from ...models import (
     BeltInvert,
@@ -41,13 +39,7 @@ from ..invert_belt_transect import InvertBeltTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
-from . import (
-    BaseProjectMethodSEView,
-    BaseProjectMethodView,
-    clean_sample_event_models,
-    save_model,
-    save_one_to_many,
-)
+from . import BaseProjectMethodSEView, BaseProjectMethodView
 
 __all__ = ["BeltInvertSerializer", "ObsBeltInvertSerializer"]
 
@@ -100,96 +92,6 @@ class BeltInvertMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     )
     serializer_class = BeltInvertMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
-
-    @transaction.atomic
-    def update(self, request, project_pk, pk=None):
-        errors = {}
-        is_valid = True
-        nested_data = dict(
-            sample_event=request.data.get("sample_event"),
-            beltinvert_transect=request.data.get("beltinvert_transect"),
-            observers=request.data.get("observers"),
-            obs_belt_inverts=request.data.get("obs_belt_inverts"),
-        )
-        belt_invert_data = {k: v for k, v in request.data.items() if k not in nested_data}
-        belt_invert_id = belt_invert_data["id"]
-
-        context = dict(request=request)
-
-        sid = transaction.savepoint()
-        try:
-            try:
-                belt_invert = BeltInvert.objects.get(
-                    id=belt_invert_id,
-                    transect__sample_event__site__project_id=project_pk,
-                )
-            except BeltInvert.DoesNotExist:
-                transaction.savepoint_rollback(sid)
-                return Response(status=status.HTTP_404_NOT_FOUND)
-
-            check, errs = save_one_to_many(
-                foreign_key=("transectmethod", belt_invert_id),
-                database_records=belt_invert.observers.all(),
-                data=request.data.get("observers") or [],
-                serializer_class=ObserverSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["observers"] = errs
-
-            check, errs = save_one_to_many(
-                foreign_key=("beltinvert", belt_invert_id),
-                database_records=belt_invert.beltinvert_observations.all(),
-                data=request.data.get("obs_belt_inverts") or [],
-                serializer_class=ObsBeltInvertSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["obs_belt_inverts"] = errs
-
-            check, errs = save_model(
-                data=nested_data["sample_event"],
-                serializer_class=SampleEventSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["sample_event"] = errs
-
-            check, errs = save_model(
-                data=nested_data["beltinvert_transect"],
-                serializer_class=InvertBeltTransectSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["beltinvert_transect"] = errs
-
-            check, errs = save_model(
-                data=belt_invert_data,
-                serializer_class=BeltInvertSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["belt_invert"] = errs
-
-            if is_valid is False:
-                transaction.savepoint_rollback(sid)
-                return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
-
-            clean_sample_event_models(nested_data["sample_event"])
-
-            transaction.savepoint_commit(sid)
-
-            belt_invert = BeltInvert.objects.get(id=belt_invert_id)
-            return Response(BeltInvertMethodSerializer(belt_invert).data, status=status.HTTP_200_OK)
-
-        except Exception:
-            transaction.savepoint_rollback(sid)
-            raise
 
 
 class BeltInvertMethodObsSerializer(BaseSUViewAPISerializer):
