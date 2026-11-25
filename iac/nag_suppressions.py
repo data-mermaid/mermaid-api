@@ -274,7 +274,6 @@ def suppress_common(stack: Stack) -> None:
         "MermaidApiBackupBucket/Resource",
         "MermaidApiConfigBucket/Resource",
         "MermaidApiDataBucket/Resource",
-        "MermaidImageProcessingBackupBucket/Resource",
     ]
     for bucket_path in s3_bucket_paths:
         _suppress_by_path(
@@ -285,12 +284,34 @@ def suppress_common(stack: Stack) -> None:
                     id="AwsSolutions-S1",
                     reason=f"{TODO}: Enable server access logging on this S3 bucket.",
                 ),
-                NagPackSuppression(
-                    id="AwsSolutions-S10",
-                    reason=f"{TODO}: Add aws:SecureTransport condition to the bucket policy.",
-                ),
             ],
         )
+
+    # mermaid-image-processing is intentionally public-read (card 2263): in dev
+    # it is the image bucket the API serves to the UI as unsigned URLs, so the
+    # objects must be anonymously GET-able. S2 (block public access) is therefore
+    # suppressed by design; access is limited to s3:GetObject via the bucket
+    # policy, and enforce_ssl restricts that to TLS. S10 is satisfied by
+    # enforce_ssl, so it is not suppressed here.
+    _suppress_by_path(
+        stack,
+        "MermaidImageProcessingBackupBucket/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-S1",
+                reason=f"{TODO}: Enable server access logging on this S3 bucket.",
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-S2",
+                reason=(
+                    "Intentional: this bucket serves images to the UI as unsigned "
+                    "public URLs (AWS_QUERYSTRING_AUTH=False). Public access is "
+                    "scoped to anonymous s3:GetObject via the bucket policy; "
+                    "public ACLs remain blocked."
+                ),
+            ),
+        ],
+    )
 
     # --- KMS ---
     _suppress_by_path(
