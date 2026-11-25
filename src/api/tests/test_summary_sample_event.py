@@ -162,12 +162,14 @@ def test_summary_sample_event_benthicpit_bleaching(
     assert hard["pale"] == 50.0
     assert hard["normal"] == 50.0
     assert hard["fully_bleached"] == 0.0
-    # SE objects have no combined `bleached` key, and total coral is not reported
-    assert "bleached" not in hard
+    assert hard["bleached"] == 50.0
+    # Total coral is not reported
     assert "percent_bleached_total_coral" not in benthicpit
     # No soft coral with a status: null (stripped), not 0
     assert "bleaching_soft_coral_points" not in benthicpit
     assert "percent_bleached_soft_coral" not in benthicpit
+    # One SU: no standard deviation
+    assert "percent_bleached_hard_coral_sd" not in benthicpit
 
 
 def test_summary_sample_event_benthicpit_bleaching_no_statuses(
@@ -221,7 +223,10 @@ def test_summary_sample_event_benthicpit_bleaching_pooled(
     assert benthicpit["bleaching_hard_coral_points"] == 3
     assert benthicpit["percent_bleached_hard_coral"]["pale"] == 33.33
     assert benthicpit["percent_bleached_hard_coral"]["normal"] == 66.67
-    assert "percent_bleached_hard_coral_sd" not in benthicpit
+    assert benthicpit["percent_bleached_hard_coral"]["bleached"] == 33.33
+    # SD of the SU bleached percents [100, 0]
+    assert benthicpit["percent_bleached_hard_coral_sd"] == 70.71
+    assert "percent_bleached_soft_coral_sd" not in benthicpit
 
 
 def test_summary_sample_event_benthicpit_bleaching_private(
@@ -254,5 +259,7 @@ def test_summary_sample_event_benthicpit_bleaching_private(
         "bleaching_soft_coral_points",
         "percent_bleached_hard_coral",
         "percent_bleached_soft_coral",
+        "percent_bleached_hard_coral_sd",
+        "percent_bleached_soft_coral_sd",
     ):
         assert field not in benthicpit

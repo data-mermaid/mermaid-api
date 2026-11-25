@@ -18,7 +18,6 @@ from ...models import (
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_bleaching_percents,
-    to_bleaching_se_percents,
     to_day,
     to_governance,
     to_join_list,
@@ -446,6 +445,8 @@ class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
                 "bleaching_soft_coral_points",
                 "percent_bleached_hard_coral",
                 "percent_bleached_soft_coral",
+                "percent_bleached_hard_coral_sd",
+                "percent_bleached_soft_coral_sd",
             ]
         )
 
@@ -509,12 +510,18 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField(
             "percent_bleached_hard_coral",
             "Percent bleached hard coral",
-            to_bleaching_se_percents,
+            to_bleaching_percents,
         ),
         ReportField(
             "percent_bleached_soft_coral",
             "Percent bleached soft coral",
-            to_bleaching_se_percents,
+            to_bleaching_percents,
+        ),
+        ReportField(
+            "percent_bleached_hard_coral_sd", "Percent bleached hard coral standard deviation"
+        ),
+        ReportField(
+            "percent_bleached_soft_coral_sd", "Percent bleached soft coral standard deviation"
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),

@@ -287,7 +287,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'percent_bleached_hard_coral', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthiclit_bleaching.percent_bleached_hard_coral END),
                 'percent_bleached_soft_coral', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthiclit_bleaching.percent_bleached_soft_coral END)
+                benthiclit_bleaching.percent_bleached_soft_coral END),
+                'percent_bleached_hard_coral_sd', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                benthiclit_bleaching.percent_bleached_hard_coral_sd END),
+                'percent_bleached_soft_coral_sd', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                benthiclit_bleaching.percent_bleached_soft_coral_sd END)
             )), '{{}}'),
             'benthicpit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bp.sample_unit_count,
@@ -312,7 +316,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'percent_bleached_hard_coral', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthicpit_bleaching.percent_bleached_hard_coral END),
                 'percent_bleached_soft_coral', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthicpit_bleaching.percent_bleached_soft_coral END)
+                benthicpit_bleaching.percent_bleached_soft_coral END),
+                'percent_bleached_hard_coral_sd', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                benthicpit_bleaching.percent_bleached_hard_coral_sd END),
+                'percent_bleached_soft_coral_sd', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                benthicpit_bleaching.percent_bleached_soft_coral_sd END)
             )), '{{}}'),
             'benthicpqt', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', pqt.sample_unit_count,

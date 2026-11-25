@@ -112,7 +112,10 @@ def test_benthicpit_se_bleaching_pooled(db_setup, api_client1, pit_bleaching):
     hard = se["percent_bleached_hard_coral"]
     assert hard["pale"] == 33.33
     assert hard["normal"] == 66.67
-    assert "bleached" not in hard
+    # Pooled: 1 of 3 points not normal
+    assert hard["bleached"] == 33.33
+    # SD of the SU bleached percents [100, 0]
+    assert se["percent_bleached_hard_coral_sd"] == 70.71
+    assert se["percent_bleached_soft_coral_sd"] is None
     assert se["percent_bleached_soft_coral"] is None
-    assert "percent_bleached_hard_coral_sd" not in se
     assert "percent_bleached_hard_coral_avg" not in se

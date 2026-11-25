@@ -185,10 +185,11 @@ BLEACHING_STATUS_CHOICES = (
     (BLEACHING_STATUS_RECENT_MORTALITY, "recent_bleaching_mortality"),
 )
 BLEACHING_BLEACHED_KEY = "bleached"
-# Tabular order of SE percent_bleached_* keys: statuses by val. SE objects have no `bleached` key.
-BLEACHING_SE_PERCENT_KEYS = tuple(name for _, name in BLEACHING_STATUS_CHOICES)
-# Tabular order of SU percent_bleached_* keys: total bleached first, then statuses by val
-BLEACHING_PERCENT_KEYS = (BLEACHING_BLEACHED_KEY, *BLEACHING_SE_PERCENT_KEYS)
+# Tabular order of SU and SE percent_bleached_* keys: total bleached first, then statuses by val
+BLEACHING_PERCENT_KEYS = (
+    BLEACHING_BLEACHED_KEY,
+    *(name for _, name in BLEACHING_STATUS_CHOICES),
+)
 
 
 BLEACHING_STATUS_CHOICES_UPDATED_ON = datetime.datetime(

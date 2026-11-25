@@ -413,7 +413,9 @@ class BenthicPITSESQLModel(BaseSQLModel):
         se_bleaching.bleaching_hard_coral_points,
         se_bleaching.bleaching_soft_coral_points,
         se_bleaching.percent_bleached_hard_coral,
-        se_bleaching.percent_bleached_soft_coral
+        se_bleaching.percent_bleached_soft_coral,
+        se_bleaching.percent_bleached_hard_coral_sd,
+        se_bleaching.percent_bleached_soft_coral_sd
 
         FROM benthicpit_su
 
@@ -466,6 +468,8 @@ class BenthicPITSESQLModel(BaseSQLModel):
         se_bleaching.bleaching_soft_coral_points,
         se_bleaching.percent_bleached_hard_coral,
         se_bleaching.percent_bleached_soft_coral,
+        se_bleaching.percent_bleached_hard_coral_sd,
+        se_bleaching.percent_bleached_soft_coral_sd,
         se_observers.observers
     """
 
@@ -501,6 +505,12 @@ class BenthicPITSESQLModel(BaseSQLModel):
     bleaching_soft_coral_points = models.PositiveIntegerField(null=True, blank=True)
     percent_bleached_hard_coral = models.JSONField(null=True, blank=True)
     percent_bleached_soft_coral = models.JSONField(null=True, blank=True)
+    percent_bleached_hard_coral_sd = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    percent_bleached_soft_coral_sd = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:

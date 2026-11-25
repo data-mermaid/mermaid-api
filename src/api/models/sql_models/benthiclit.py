@@ -413,7 +413,9 @@ class BenthicLITSESQLModel(BaseSQLModel):
             se_bleaching.bleaching_hard_coral_length,
             se_bleaching.bleaching_soft_coral_length,
             se_bleaching.percent_bleached_hard_coral,
-            se_bleaching.percent_bleached_soft_coral
+            se_bleaching.percent_bleached_soft_coral,
+            se_bleaching.percent_bleached_hard_coral_sd,
+            se_bleaching.percent_bleached_soft_coral_sd
         FROM
             benthiclit_su
             INNER JOIN (
@@ -473,6 +475,8 @@ class BenthicLITSESQLModel(BaseSQLModel):
             se_bleaching.bleaching_soft_coral_length,
             se_bleaching.percent_bleached_hard_coral,
             se_bleaching.percent_bleached_soft_coral,
+            se_bleaching.percent_bleached_hard_coral_sd,
+            se_bleaching.percent_bleached_soft_coral_sd,
             se_observers.observers
             """
     sql_args = dict(
@@ -507,6 +511,12 @@ class BenthicLITSESQLModel(BaseSQLModel):
     bleaching_soft_coral_length = models.PositiveIntegerField(null=True, blank=True)
     percent_bleached_hard_coral = models.JSONField(null=True, blank=True)
     percent_bleached_soft_coral = models.JSONField(null=True, blank=True)
+    percent_bleached_hard_coral_sd = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    percent_bleached_soft_coral_sd = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
     data_policy_benthiclit = models.CharField(max_length=50)
 
     class Meta:

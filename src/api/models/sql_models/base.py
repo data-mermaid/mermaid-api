@@ -9,6 +9,7 @@ from api.models import (
     BLEACHING_CATEGORY_HARD_CORAL,
     BLEACHING_CATEGORY_SOFT_CORAL,
     BLEACHING_STATUS_CHOICES,
+    BLEACHING_STATUS_NORMAL,
     Project,
 )
 
@@ -126,8 +127,10 @@ def bleaching_se_sql(su_table, amount, cte_name="se_bleaching"):
     - bleaching_{hard,soft}_coral_sample_unit_count: SUs that contributed coral of that type
     - bleaching_{hard,soft}_coral_{amount}: summed coral amount with a status
     - percent_bleached_{hard,soft}_coral: pooled share of each status, i.e. the summed coral amount
-      per status over the summed coral amount, from the SUs' `bleaching_status_amounts`.
-      No `bleached` key.
+      per status over the summed coral amount, from the SUs' `bleaching_status_amounts`, plus the
+      pooled `bleached` share (every status other than normal).
+    - percent_bleached_{hard,soft}_coral_sd: sample standard deviation of the SUs' `bleached`
+      percent, over the SUs with coral of that type. Null when fewer than 2 SUs have it.
     Totals and percents are null when no SU has coral of that type with a status.
     Pass a distinct `cte_name` to use this more than once in the same query.
     """
@@ -135,13 +138,26 @@ def bleaching_se_sql(su_table, amount, cte_name="se_bleaching"):
         ("hard", BLEACHING_CATEGORY_HARD_CORAL),
         ("soft", BLEACHING_CATEGORY_SOFT_CORAL),
     )
+    normal_key = dict(BLEACHING_STATUS_CHOICES)[BLEACHING_STATUS_NORMAL]
     status_aggs = ",\n        ".join(
         f"""SUM(amount_pooled) FILTER (WHERE coral_type = '{category}') :: integer AS bleaching_{key}_coral_{amount},
-        jsonb_object_agg(key, ROUND(percent_pooled :: numeric, 2)) FILTER (WHERE coral_type = '{category}') AS percent_bleached_{key}_coral"""
+        jsonb_build_object(
+            '{BLEACHING_BLEACHED_KEY}',
+            ROUND(
+                100.0 * SUM(amount_pooled) FILTER (WHERE coral_type = '{category}' AND key <> '{normal_key}')
+                / NULLIF(SUM(amount_pooled) FILTER (WHERE coral_type = '{category}'), 0),
+                2
+            )
+        )
+        || jsonb_object_agg(key, ROUND(percent_pooled :: numeric, 2)) FILTER (WHERE coral_type = '{category}')
+        AS percent_bleached_{key}_coral"""
         for key, category in coral_types
     )
-    count_aggs = ",\n        ".join(
-        f"COUNT(bleaching_{key}_coral_{amount}) AS bleaching_{key}_coral_sample_unit_count"
+    su_aggs = ",\n            ".join(
+        f"""COUNT(bleaching_{key}_coral_{amount}) AS bleaching_{key}_coral_sample_unit_count,
+            ROUND(
+                STDDEV((percent_bleached_{key}_coral->>'{BLEACHING_BLEACHED_KEY}') :: numeric), 2
+            ) AS percent_bleached_{key}_coral_sd"""
         for key, _ in coral_types
     )
     return f"""
@@ -179,7 +195,7 @@ def bleaching_se_sql(su_table, amount, cte_name="se_bleaching"):
         FROM (
             SELECT sample_event_id,
             COUNT(*) FILTER (WHERE include_bleaching) AS bleaching_sample_unit_count,
-            {count_aggs}
+            {su_aggs}
             FROM {su_table}
             GROUP BY sample_event_id
         ) AS {cte_name}_counts
