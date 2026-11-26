@@ -1,0 +1,5 @@
+paths:
+  .github/workflows/deploy-cdk.yml:
+    ignore:
+      # concurrency.queue shipped 2026-05-07; actionlint v1.7.12 predates it. Drop once actionlint knows the key.
+      - 'unexpected key "queue" for "concurrency" section'
