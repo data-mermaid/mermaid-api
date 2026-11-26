@@ -29,9 +29,13 @@ jobs:
   deploy:
     needs: [call-test]
     # Job-level, not workflow-level, so the post-deploy aggregate-tests job doesn't hold
-    # the deploy lock and make later pushes queue behind it.
+    # the deploy lock and make later pushes queue behind it. The lock serialises deploys
+    # but not their order (call-test of two pushes runs in parallel), so a dev deploy
+    # skips itself when dev has moved on; see "Skip if dev has a newer commit".
     concurrency:
       group: api-deployment-${{ github.ref }}
+    outputs:
+      superseded: ${{ steps.newest.outputs.superseded }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # required for requesting the OIDC JWT (AWS role assume)
@@ -73,8 +77,24 @@ jobs:
           role-duration-seconds: 3599
           aws-region: us-east-1
           role-skip-session-tagging: true
-      - name: CDK Deploy DEV
+
+      # Runs after the deploy lock is held, right before the deploy. If a newer dev push
+      # exists, its own run deploys it; deploying this older checkout would overwrite it.
+      - name: Skip if dev has a newer commit
+        id: newest
         if: startsWith(github.ref, 'refs/heads/dev')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          latest=$(gh api "repos/$REPO/commits/dev" --jq .sha)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::notice::Not deploying $GITHUB_SHA: dev is now at $latest, and that push's run deploys it."
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: CDK Deploy DEV
+        if: startsWith(github.ref, 'refs/heads/dev') && steps.newest.outputs.superseded != 'true'
         env:
           DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
           SYS_EMAIL: ${{ secrets.SYS_EMAIL }}
@@ -128,7 +148,9 @@ jobs:
   # CI=false / NOT_CRAN=true below un-skips them.
   aggregate-tests:
     needs: [deploy]
-    if: github.ref == 'refs/heads/dev'
+    # Not when this push's deploy was skipped for a newer dev commit: that push's run
+    # deploys and tests it.
+    if: github.ref == 'refs/heads/dev' && needs.deploy.outputs.superseded != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -165,9 +187,29 @@ jobs:
           dependencies: '"hard"'
           extra-packages: any::testthat
 
+      # This job runs outside the deploy lock, so a later dev push can deploy while it
+      # runs. APIVersionMiddleware sets http_api_version to the deployed short SHA (also
+      # on a 401, so no token is needed). Test only if dev still serves this commit.
+      - name: Check dev serves this commit
+        id: rev_before
+        shell: bash
+        run: |
+          rev=$(curl -sS -D - -o /dev/null https://dev-api.datamermaid.org/v1/ \
+            | tr -d '\r' | awk -F': ' 'tolower($1) == "http_api_version" { print $2 }')
+          if [ -z "$rev" ]; then
+            echo "::error::dev API returned no http_api_version header"
+            exit 1
+          fi
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_SHA" != "$rev"* ]]; then
+            echo "::notice::Not testing $GITHUB_SHA: dev now serves $rev, and that push's run tests it."
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # The token is fetched and used in this one step, so no later step (including
       # third-party post-job steps) can read it.
       - name: Run mermaidr aggregate tests against dev
+        if: steps.rev_before.outputs.stale != 'true'
         working-directory: mermaidr
         shell: bash
         env:
@@ -202,3 +244,17 @@ jobs:
             ))
             if (sum(res[["passed"]]) == 0) stop("No aggregate test passed: all skipped or none ran")
           '
+
+      # A deploy that lands mid-run means the tests may have hit two builds. Warn rather
+      # than fail: the newer push's own run re-tests the build it deployed.
+      - name: Check dev still serves the same build
+        if: ${{ !cancelled() && steps.rev_before.outputs.stale != 'true' }}
+        shell: bash
+        env:
+          REV_BEFORE: ${{ steps.rev_before.outputs.rev }}
+        run: |
+          rev=$(curl -sS -D - -o /dev/null https://dev-api.datamermaid.org/v1/ \
+            | tr -d '\r' | awk -F': ' 'tolower($1) == "http_api_version" { print $2 }')
+          if [ "$rev" != "$REV_BEFORE" ]; then
+            echo "::warning::dev changed from $REV_BEFORE to '$rev' during the tests; this run's results are inconclusive. The run for the newer push is authoritative."
+          fi
