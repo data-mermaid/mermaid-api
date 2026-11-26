@@ -32,8 +32,11 @@ jobs:
     # the deploy lock and make later pushes queue behind it. The lock serialises deploys
     # but not their order (call-test of two pushes runs in parallel), so a dev deploy
     # skips itself when dev has moved on; see "Skip if dev has a newer commit".
+    # queue: max keeps every pending deploy; the default (one pending job) lets an older
+    # push cancel the newest one's pending deploy, and then nothing deploys the newest commit.
     concurrency:
       group: api-deployment-${{ github.ref }}
+      queue: max
     outputs:
       superseded: ${{ steps.newest.outputs.superseded }}
     runs-on: ubuntu-latest
