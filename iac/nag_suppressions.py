@@ -197,18 +197,6 @@ def suppress_github_access(stack: Stack) -> None:
 
 
 def suppress_common(stack: Stack) -> None:
-    # --- VPC ---
-    _suppress_by_path(
-        stack,
-        "Vpc/Resource",
-        [
-            NagPackSuppression(
-                id="AwsSolutions-VPC7",
-                reason=f"{TODO}: Enable VPC Flow Logs for network traffic auditing.",
-            ),
-        ],
-    )
-
     # --- Secrets Manager ---
     for secret_path in ["DBCredentialsSecret/Resource", "ReportS3UserSecret/Resource"]:
         _suppress_by_path(
