@@ -39,8 +39,16 @@ class CollectRecordCSVListSerializer(ListSerializer):
         else:
             data[field_name] = [s.strip() for s in val.split(",")]
 
-    def map_column_names(self, row):
-        return {self.child.get_schemafield(k)[0]: v for k, v in row.items()}
+    def map_column_names(self, row, column_map=None):
+        # column_map (csv_header -> field_name) is built once per file in
+        # format_data; fall back to the (memoized) child lookup for any key
+        # not in it, e.g. a row with keys the first row didn't have.
+        column_map = column_map or {}
+        get_schemafield = self.child.get_schemafield
+        return {
+            (column_map[k] if k in column_map else get_schemafield(k)[0]): v
+            for k, v in row.items()
+        }
 
     def assign_choices(self, row, choices_sets):
         # choices_sets values are pre-normalized (see get_choices_sets) so this
@@ -148,18 +156,22 @@ class CollectRecordCSVListSerializer(ListSerializer):
         header_map = {}
         # Create header_map for child serializers that need to access original column names
         # This maps field names to original CSV column headers
+        # column_map is the forward mapping (CSV column header -> field name),
+        # resolved once here instead of once per cell in map_column_names.
+        column_map = {}
         if data_list:
             first_row = data_list[0]
             for csv_header in first_row.keys():
                 field_name = self.child.get_schemafield(csv_header)[0]
                 header_map[field_name] = csv_header
+                column_map[csv_header] = field_name
         self.child.header_map = header_map
 
         # Store original data for child serializers that need to access it
         self.child.original_data = data_list
 
         for n, row in enumerate(data_list):
-            fmt_row = self.map_column_names(row)
+            fmt_row = self.map_column_names(row, column_map)
             pk = str(uuid.uuid4())
             self._row_index[pk] = n + 1 + error_row_offset
             fmt_row["id"] = pk
@@ -425,9 +437,30 @@ class CollectRecordCSVSerializer(Serializer):
 
         return output
 
+    # Field names of each inheritor's base serializer, keyed by base class.
+    # Declared fields are fixed per class, so building the base serializer
+    # once per process is enough.
+    _base_field_names_cache = {}
+    # Per-instance caches; see get_schemafields and get_schemafield.
+    _schemafields = None
+    _schemafield_memo = None
+
+    @classmethod
+    def get_base_field_names(cls):
+        base_cls = cls.__mro__[1]
+        field_names = CollectRecordCSVSerializer._base_field_names_cache.get(base_cls)
+        if field_names is None:
+            field_names = frozenset(base_cls().fields.keys())
+            CollectRecordCSVSerializer._base_field_names_cache[base_cls] = field_names
+        return field_names
+
     def get_schemafields(self):
-        base_csv_serializer_fields = self.__class__.__mro__[1]().fields
-        return {k: v for k, v in self.fields.items() if k not in base_csv_serializer_fields}
+        if self._schemafields is None:
+            base_csv_serializer_fields = self.get_base_field_names()
+            self._schemafields = {
+                k: v for k, v in self.fields.items() if k not in base_csv_serializer_fields
+            }
+        return self._schemafields
 
     def get_field_labels(self, field):
         return [f"{label} *" if field.required else label for label in field.label.split(",")]
@@ -450,6 +483,15 @@ class CollectRecordCSVSerializer(Serializer):
         return fieldname
 
     def get_schemafield(self, label):
+        # Called for every CSV header and every error key; the result only
+        # depends on the label, so memoize it per instance.
+        if self._schemafield_memo is None:
+            self._schemafield_memo = {}
+        if label not in self._schemafield_memo:
+            self._schemafield_memo[label] = self._get_schemafield(label)
+        return self._schemafield_memo[label]
+
+    def _get_schemafield(self, label):
         schema_fields = self.get_schemafields()
         for fieldname, field in schema_fields.items():
             if label.strip() in self.get_field_labels(field):
