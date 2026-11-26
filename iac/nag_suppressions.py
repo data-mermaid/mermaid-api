@@ -197,18 +197,6 @@ def suppress_github_access(stack: Stack) -> None:
 
 
 def suppress_common(stack: Stack) -> None:
-    # --- VPC ---
-    _suppress_by_path(
-        stack,
-        "Vpc/Resource",
-        [
-            NagPackSuppression(
-                id="AwsSolutions-VPC7",
-                reason=f"{TODO}: Enable VPC Flow Logs for network traffic auditing.",
-            ),
-        ],
-    )
-
     # --- Secrets Manager ---
     for secret_path in ["DBCredentialsSecret/Resource", "ReportS3UserSecret/Resource"]:
         _suppress_by_path(
@@ -313,8 +301,8 @@ def suppress_common(stack: Stack) -> None:
     # suppressed by design; public access is granted by an out-of-band bucket
     # policy (not managed by CDK — S3 allows only one policy per bucket and CFN
     # cannot create one over an existing one), and public ACLs stay blocked.
-    # S10 (TLS-only bucket policy) is suppressed too: we do not attach a managed
-    # policy here, so enforce_ssl is not applied to this bucket.
+    # S10 (TLS-only bucket policy) is suppressed too: CDK cannot attach enforce_ssl
+    # here, so TLS-only access lives in the same out-of-band policy instead.
     _suppress_by_path(
         stack,
         "MermaidImageProcessingBackupBucket/Resource",
@@ -335,9 +323,11 @@ def suppress_common(stack: Stack) -> None:
             NagPackSuppression(
                 id="AwsSolutions-S10",
                 reason=(
-                    f"{TODO}: Not managing this bucket's policy in CDK (an "
-                    "out-of-band public-read policy already exists), so "
-                    "enforce_ssl is not applied here."
+                    f"{ACCEPTED}: TLS-only access is enforced by the "
+                    "DenyInsecureTransport statement (aws:SecureTransport=false) "
+                    "in the bucket's out-of-band policy, added 2026-11-25 (card "
+                    "2263). CDK cannot manage that policy, so enforce_ssl is not "
+                    "set here."
                 ),
             ),
         ],
