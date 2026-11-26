@@ -143,39 +143,64 @@ jobs:
           import os
           import xml.etree.ElementTree as ET
 
+
+          def node_id(classname, name):
+              # junit classnames are dotted (api.tests.test_x.TestY); rebuild the
+              # pytest node id so it can be pasted into `pytest`.
+              parts = classname.split(".")
+              for i in range(len(parts), 0, -1):
+                  path = "/".join(parts[:i]) + ".py"
+                  if os.path.exists(path):
+                      return "::".join([path, *parts[i:], name])
+              return f"{classname}::{name}"
+
+
+          def code(text):
+              # A code span keeps <...> from being stripped as HTML.
+              return "`" + text.replace("`", "'") + "`"
+
+
           print("### Tests\n")
           if not os.path.exists("junit.xml"):
               print("No results: pytest did not finish. See the job log.")
               raise SystemExit
-          suite = ET.parse("junit.xml").getroot()
-          if suite.tag == "testsuites":
-              suite = suite.find("testsuite")
-          total, failed, errors, skipped = (
-              int(suite.get(k, 0)) for k in ("tests", "failures", "errors", "skipped")
-          )
+          root = ET.parse("junit.xml").getroot()
+          counts = {"passed": 0, "failed": 0, "errors": 0, "skipped": 0}
+          bad = []
+          # One outcome per test: a test that fails and then errors in teardown is
+          # counted once, as failed.
+          for case in root.iter("testcase"):
+              failure, error = case.find("failure"), case.find("error")
+              result = failure if failure is not None else error
+              if result is not None:
+                  counts["failed" if failure is not None else "errors"] += 1
+                  bad.append((case, result))
+              elif case.find("skipped") is not None:
+                  counts["skipped"] += 1
+              else:
+                  counts["passed"] += 1
+          seconds = sum(float(s.get("time", 0)) for s in root.iter("testsuite"))
           print("| Passed | Failed | Errors | Skipped | Time |")
           print("|---|---|---|---|---|")
           print(
-              f"| {total - failed - errors - skipped} | {failed} | {errors} | {skipped} "
-              f"| {float(suite.get('time', 0)):.0f}s |"
+              f"| {counts['passed']} | {counts['failed']} | {counts['errors']} "
+              f"| {counts['skipped']} | {seconds:.0f}s |"
           )
-          bad = [
-              (case, case.find("failure") if case.find("failure") is not None else case.find("error"))
-              for case in suite.iter("testcase")
-          ]
-          bad = [(case, result) for case, result in bad if result is not None]
           if bad:
               print("\n#### Failed tests\n")
               for case, result in bad[:50]:
-                  message = (result.get("message") or "").strip().splitlines()[:1]
-                  print(f"- `{case.get('classname')}::{case.get('name')}`: {''.join(message)[:200]}")
+                  test = code(node_id(case.get("classname", ""), case.get("name", "")))
+                  line = (result.get("message") or "").strip().split("\n")[0][:200]
+                  print(f"- {test}: {code(line)}" if line else f"- {test}")
               if len(bad) > 50:
                   print(f"- ...and {len(bad) - 50} more; see the job log.")
           EOF
-          if [ -f .coverage ]; then
+          # No coverage data (pytest interrupted): skip the section rather than
+          # fail this step on top of the real failure.
+          if total=$(coverage report --format=total 2>/dev/null); then
             {
               echo
-              echo "### Coverage: $(coverage report --format=total)%"
+              echo "### Coverage: ${total}%"
               echo
               echo "<details><summary>Files below 100%, lowest first</summary>"
               echo

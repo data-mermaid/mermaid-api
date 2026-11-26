@@ -246,15 +246,17 @@ jobs:
               filter = "mermaid_get_project_data|mermaid_get_summary_sampleevents",
               stop_on_failure = FALSE
             ))
+            # passed/failed count expectations; error/skipped flag whole tests.
             bad <- res[["failed"]] > 0 | res[["error"]]
-            rows <- sprintf("| %s | %s | %s | %d | %d | %d |",
-              ifelse(bad, "❌", ifelse(res[["skipped"]], "⏭️", "✅")),
+            ok <- !bad & res[["passed"]] > 0
+            rows <- sprintf("| %s | %s | %s | %d | %d |",
+              ifelse(bad, "❌", ifelse(ok, "✅", "⏭️")),
               res[["file"]], gsub("|", "\\|", res[["test"]], fixed = TRUE),
-              res[["passed"]], res[["failed"]], as.integer(res[["skipped"]]))
+              res[["passed"]], res[["failed"]])
             cat("### mermaidr aggregate tests\n\n",
-                sprintf("%d passed, %d failed, %d tests with errors, %d skipped.\n\n",
-                  sum(res[["passed"]]), sum(res[["failed"]]), sum(res[["error"]]), sum(res[["skipped"]])),
-                "| | File | Test | Passed | Failed | Skipped |\n|---|---|---|---|---|---|\n",
+                sprintf("%d tests: %d passed, %d failed or errored, %d skipped. %d expectations passed, %d failed.\n\n",
+                  nrow(res), sum(ok), sum(bad), sum(!bad & !ok), sum(res[["passed"]]), sum(res[["failed"]])),
+                "| | File | Test | Expectations passed | Expectations failed |\n|---|---|---|---|---|\n",
                 paste(rows, collapse = "\n"), "\n",
                 sep = "", file = Sys.getenv("GITHUB_STEP_SUMMARY"), append = TRUE)
             if (any(bad)) stop("Aggregate tests failed")
@@ -303,25 +305,25 @@ jobs:
       - name: Generate SBOM (CycloneDX)
         run: trivy image --format cyclonedx --output sbom.cdx.json mermaid-api:sbom
 
-      # Package list on the run's summary page, so it can be read without
-      # downloading the artifact.
-      - name: SBOM summary
-        run: |
-          jq -r '
-            def lic: [.licenses[]?.license | .id // .name // empty] | unique | join(", ");
-            def pkgs(t): [.components[] | select((.purl // "") | startswith("pkg:\(t)/"))] | sort_by(.name | ascii_downcase);
-            def table(t): pkgs(t) | map("| \(.name) | \(.version) | \(lic) |") | join("\n");
-            (.components[] | select(.type == "operating-system")) as $os
-            | ([.metadata.component.properties[]? | select(.name == "aquasecurity:trivy:Size") | .value | tonumber] | first // 0) as $size
-            | "### SBOM (CycloneDX \(.specVersion))\n",
-              "\($os.name) \($os.version), image \($size / 1e6 | floor) MB: \(pkgs("pypi") | length) Python and \(pkgs("deb") | length) Debian packages. The full file is the `api-image-sbom` artifact.\n",
-              "<details><summary>Python packages</summary>\n\n| Package | Version | License |\n|---|---|---|\n\(table("pypi"))\n\n</details>\n",
-              "<details><summary>Debian packages</summary>\n\n| Package | Version | License |\n|---|---|---|\n\(table("deb"))\n\n</details>"
-          ' sbom.cdx.json >> "$GITHUB_STEP_SUMMARY"
-
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: api-image-sbom
           path: sbom.cdx.json
           retention-days: 90
           if-no-files-found: error
+
+      # Package list on the run's summary page, so it can be read without
+      # downloading the artifact. After the upload, so a failure here can't lose it.
+      - name: SBOM summary
+        run: |
+          jq -r '
+            def lic: [.licenses[]? | .expression // .license.id // .license.name // empty] | unique | join(", ");
+            def pkgs(t): [.components[] | select((.purl // "") | startswith("pkg:\(t)/"))] | sort_by(.name | ascii_downcase);
+            def table(t): pkgs(t) | map("| \(.name) | \(.version) | \(lic) |") | join("\n");
+            (first(.components[] | select(.type == "operating-system")) // {name: "unknown OS"}) as $os
+            | ([.metadata.component.properties[]? | select(.name == "aquasecurity:trivy:Size") | .value | tonumber] | first // 0) as $size
+            | "### SBOM (CycloneDX \(.specVersion))\n",
+              "\([$os.name, $os.version] | map(select(. != null)) | join(" ")), image \($size / 1e6 | floor) MB: \(pkgs("pypi") | length) Python and \(pkgs("deb") | length) Debian packages. The full file is the `api-image-sbom` artifact.\n",
+              "<details><summary>Python packages</summary>\n\n| Package | Version | License |\n|---|---|---|\n\(table("pypi"))\n\n</details>\n",
+              "<details><summary>Debian packages</summary>\n\n| Package | Version | License |\n|---|---|---|\n\(table("deb"))\n\n</details>"
+          ' sbom.cdx.json >> "$GITHUB_STEP_SUMMARY"
