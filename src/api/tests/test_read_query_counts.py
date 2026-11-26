@@ -12,6 +12,8 @@ from api.models import (
     AuthUser,
     BeltFish,
     BenthicAttribute,
+    BenthicPIT,
+    BenthicTransect,
     CollectRecord,
     FishBeltTransect,
     FishSpecies,
@@ -38,7 +40,11 @@ from api.resources.project import ProjectViewSet
 from api.resources.project_profile import ProjectProfileViewSet
 from api.resources.sampleunitmethods.beltfishmethod import BeltFishMethodSerializer
 from api.resources.sync.pull import get_serialized_records
-from api.utils.project import create_submitted_summary, suggested_citation
+from api.utils.project import (
+    create_collecting_summary,
+    create_submitted_summary,
+    suggested_citation,
+)
 
 REVISION_KEYS = ("_last_revision_num", "_modified", "_deleted")
 
@@ -366,3 +372,126 @@ def test_submitted_summary_query_count_independent_of_row_count(
         # The sample unit's editor, not the method record's.
         assert record["updated_by"] == "nameless"
         assert sorted(record["observers"]) == sorted([profile1.full_name, "nameless"])
+
+
+def _nameless_profile():
+    # A nameless profile's full_name falls back to an authusers COUNT.
+    nameless = Profile.objects.create(email="nameless@mermaidcollect.org")
+    AuthUser.objects.create(profile=nameless, user_id="test|nameless@mermaidcollect.org")
+    return nameless
+
+
+def _add_summary_benthic_pits(start, count, transect, observers, su_editor):
+    for i in range(start, start + count):
+        new_transect = BenthicTransect.objects.create(
+            sample_event=transect.sample_event,
+            current=transect.current,
+            reef_slope=transect.reef_slope,
+            relative_depth=transect.relative_depth,
+            tide=transect.tide,
+            visibility=transect.visibility,
+            depth=transect.depth,
+            len_surveyed=transect.len_surveyed,
+            sample_time=transect.sample_time,
+            number=100 + i,
+            updated_by=su_editor,
+        )
+        benthic_pit = BenthicPIT.objects.create(
+            transect=new_transect, interval_size=1, interval_start=1
+        )
+        for profile in observers:
+            Observer.objects.create(transectmethod=benthic_pit, profile=profile)
+
+
+def test_submitted_summary_query_count_independent_of_row_count_across_protocols(
+    db_setup, project1, site1, profile1, fishbelt_transect1, benthic_transect1
+):
+    record_editor = Profile.objects.create(
+        email="record-editor@mermaidcollect.org", first_name="Record", last_name="Editor"
+    )
+    nameless = _nameless_profile()
+    observers = [profile1, nameless]
+
+    def add_rows(start, count):
+        _add_summary_belt_fishes(
+            start, count, fishbelt_transect1, observers, nameless, record_editor
+        )
+        _add_summary_benthic_pits(start, count, benthic_transect1, observers, nameless)
+
+    add_rows(0, 2)
+    _, summary_1x, queries_1x = _submitted_summary(project1)
+    add_rows(2, 4)
+    protocols, summary_3x, queries_3x = _submitted_summary(project1)
+
+    methods_1x = summary_1x[str(site1.pk)]["sample_unit_methods"]
+    methods_3x = summary_3x[str(site1.pk)]["sample_unit_methods"]
+    assert sorted(protocols) == ["benthicpit", "fishbelt"]
+    for protocol in ("benthicpit", "fishbelt"):
+        assert len(methods_1x[protocol]) == 2
+        assert len(methods_3x[protocol]) == 6
+        for record in methods_3x[protocol]:
+            assert record["updated_by"] == "nameless"
+            assert sorted(record["observers"]) == sorted([profile1.full_name, "nameless"])
+    assert queries_3x == queries_1x
+
+
+COLLECTING_SUMMARY_PROTOCOLS = ["fishbelt", "benthicpit", "bleachingqc"]
+
+
+def _add_collecting_rows(start, count, project, site, management, profiles):
+    # One new site per row, with a collect record per protocol and profile.
+    for i in range(start, start + count):
+        new_site = Site.objects.create(
+            project=project,
+            name=f"Collecting Site {i}",
+            location=site.location,
+            country=site.country,
+            reef_type=site.reef_type,
+            exposure=site.exposure,
+            reef_zone=site.reef_zone,
+        )
+        for protocol in COLLECTING_SUMMARY_PROTOCOLS:
+            for profile in profiles:
+                CollectRecord.objects.create(
+                    project=project,
+                    profile=profile,
+                    data={
+                        "protocol": protocol,
+                        "sample_event": {
+                            "site": str(new_site.pk),
+                            "management": str(management.pk),
+                        },
+                    },
+                )
+
+
+def _collecting_summary(project):
+    with CaptureQueriesContext(connection) as ctx:
+        protocols, summary = create_collecting_summary(project)
+    return protocols, summary, len(ctx.captured_queries)
+
+
+def test_collecting_summary_query_count_independent_of_row_count(
+    db_setup, project1, site1, management1, profile1
+):
+    nameless = _nameless_profile()
+    profiles = [profile1, nameless]
+
+    _add_collecting_rows(0, 2, project1, site1, management1, profiles)
+    _, summary_1x, queries_1x = _collecting_summary(project1)
+    _add_collecting_rows(2, 4, project1, site1, management1, profiles)
+    protocols, summary_3x, queries_3x = _collecting_summary(project1)
+
+    assert len(summary_1x) == 2
+    assert len(summary_3x) == 6
+    assert queries_3x == queries_1x
+
+    assert sorted(protocols) == sorted(COLLECTING_SUMMARY_PROTOCOLS)
+    for site_summary in summary_3x.values():
+        methods = site_summary["sample_unit_methods"]
+        assert sorted(methods) == sorted(COLLECTING_SUMMARY_PROTOCOLS)
+        for method in methods.values():
+            profile_summary = method["profile_summary"]
+            assert profile_summary[str(profile1.pk)]["profile_name"] == profile1.full_name
+            assert profile_summary[str(nameless.pk)]["profile_name"] == "nameless"
+            assert len(profile_summary[str(nameless.pk)]["collect_records"]) == 1
