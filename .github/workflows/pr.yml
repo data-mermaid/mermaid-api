@@ -52,6 +52,87 @@ jobs:
           version: "0.1.6"
           args: "format --check"
 
+  # Build the API image and scan it with Trivy (see _image-scan.yml).
+  image-scan:
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/_image-scan.yml
+
+  # Lint the Dockerfile (hadolint, config in .hadolint.yaml) and check it for
+  # misconfigurations (trivy config). Both report to code scanning. hadolint
+  # findings of warning level or above, and HIGH/CRITICAL misconfigurations,
+  # fail the job.
+  dockerfile-lint:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    env:
+      # hadolint does not sign releases; this is the sha256 GitHub recorded for
+      # the release asset. Bump both together.
+      HADOLINT_VERSION: 2.15.1
+      HADOLINT_SHA256: c7187db94eeeeca956519a6af171adc31453941a1e777961f6e680f697c8c507
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/install-trivy
+
+      - name: Install hadolint
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/hadolint" \
+            "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-linux-x86_64"
+          echo "${HADOLINT_SHA256}  $RUNNER_TEMP/hadolint" | sha256sum -c -
+          sudo install -m 0755 "$RUNNER_TEMP/hadolint" /usr/local/bin/hadolint
+          hadolint --version
+
+      # Reports run first with !cancelled(), so findings reach code scanning
+      # even when a gate step below fails.
+      - name: hadolint (SARIF)
+        id: hadolint-report
+        run: hadolint --no-fail --format sarif Dockerfile > hadolint.sarif
+
+      - name: trivy config (SARIF)
+        id: trivy-config-report
+        if: ${{ !cancelled() }}
+        run: trivy config --misconfig-scanners dockerfile --format sarif --output trivy-config.sarif .
+
+      # Fork PRs get a read-only token, so uploads would fail; the gates still run.
+      - name: Upload hadolint SARIF
+        if: >-
+          ${{ !cancelled() && steps.hadolint-report.outcome == 'success'
+          && !github.event.pull_request.head.repo.fork }}
+        uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934  # v4.39.5
+        with:
+          sarif_file: hadolint.sarif
+          category: hadolint
+
+      - name: Upload trivy config SARIF
+        if: >-
+          ${{ !cancelled() && steps.trivy-config-report.outcome == 'success'
+          && !github.event.pull_request.head.repo.fork }}
+        uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934  # v4.39.5
+        with:
+          sarif_file: trivy-config.sarif
+          category: trivy-config
+
+      - name: Gate on hadolint findings
+        if: ${{ !cancelled() }}
+        run: hadolint Dockerfile
+
+      - name: Gate on Dockerfile misconfigurations
+        if: ${{ !cancelled() }}
+        run: trivy config --misconfig-scanners dockerfile --severity HIGH,CRITICAL --exit-code 1 .
+
   # Tests run before deploys (see deploy-cdk.yml), not on every PR. PRs only
   # surface the cdk diff + nag report.
   cdk-diff:
@@ -94,9 +175,11 @@ jobs:
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708  # v5.1.1
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
-          DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.CDK_DEFAULT_ACCOUNT }}:role/${{ secrets.DEPLOY_AWS_ROLE }}
+          # PR CI assumes the least-privilege read-only role (card 2261 Phase 2), not the
+          # AdministratorAccess deploy role. cdk_diff.sh runs `cdk diff --method=template`,
+          # which only reads templates/SSM. Role name is non-secret; account from the secret.
+          role-to-assume: arn:aws:iam::${{ secrets.CDK_DEFAULT_ACCOUNT }}:role/github-pr-readonly-role
           aws-region: us-east-1
           role-skip-session-tagging: true
 

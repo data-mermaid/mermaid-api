@@ -1,0 +1,67 @@
+name: Weekly image scan
+
+# Re-scans the images ECS runs for CVEs published since they were built
+# (card 2281): the API image and the ADOT collector sidecar. Report only: no
+# gate, so new upstream CVEs show up in code scanning instead of failing a job.
+#
+# Scheduled runs use the default branch (master). Releases are tagged from
+# master, so this scans what prod runs. Run it by hand (workflow_dispatch) on
+# another branch to scan that branch instead.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"  # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api-image:
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/_image-scan.yml
+    with:
+      gate: false
+      sarif-category: trivy-image-weekly
+
+  adot-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/install-trivy
+
+      # Read the image from the CDK construct that deploys it, so this scan
+      # follows the deployed tag without a second hard-coded copy.
+      - name: Read the ADOT image from adot.py
+        id: adot
+        run: |
+          image=$(sed -nE 's/^ADOT_IMAGE = "([^"]+)"$/\1/p' iac/stacks/constructs/adot.py)
+          if [ -z "$image" ]; then
+            echo "::error file=iac/stacks/constructs/adot.py::ADOT_IMAGE assignment not found"
+            exit 1
+          fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Scan the ADOT image (SARIF)
+        env:
+          IMAGE: ${{ steps.adot.outputs.image }}
+        run: trivy image --scanners vuln --format sarif --output trivy-adot.sarif "$IMAGE"
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934  # v4.39.5
+        with:
+          sarif_file: trivy-adot.sarif
+          category: trivy-adot
