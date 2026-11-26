@@ -86,13 +86,14 @@ jobs:
         # Test data is disposable: skip crash-safety work on every commit.
         # max_locks_per_transaction: each pytest-xdist worker creates a full test
         # schema at once, which overflows the default lock table. It needs a restart.
+        env:
+          pg: ${{ job.services.postgres.id }}
         run: |
-          pg=${{ job.services.postgres.id }}
           for setting in "fsync = off" "synchronous_commit = off" "full_page_writes = off" "max_locks_per_transaction = 1024"; do
             docker exec "$pg" psql -U postgres -c "ALTER SYSTEM SET $setting"
           done
           docker restart "$pg"
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             docker exec "$pg" pg_isready -U postgres && exit 0
             sleep 1
           done
@@ -129,7 +130,85 @@ jobs:
         #   term-missing → uncovered lines printed in this job's log (human-readable)
         #   html         → browsable report, uploaded as an artifact below
         #   xml          → machine-readable, for coverage tooling (Codecov, etc.)
-        run: pytest -n auto --durations=25 --no-migrations --cov --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-fail-under=80 -q api/tests
+        # junit.xml feeds the summary step below.
+        run: pytest -n auto --durations=25 --no-migrations --cov --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-fail-under=80 --junitxml=junit.xml -q api/tests
+
+      # Results and coverage on the run's summary page, so they can be read without
+      # downloading the coverage-report artifact.
+      - name: Test summary
+        if: ${{ !cancelled() }}
+        working-directory: src
+        run: |
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import os
+          import xml.etree.ElementTree as ET
+
+
+          def node_id(classname, name):
+              # junit classnames are dotted (api.tests.test_x.TestY); rebuild the
+              # pytest node id so it can be pasted into `pytest`.
+              parts = classname.split(".")
+              for i in range(len(parts), 0, -1):
+                  path = "/".join(parts[:i]) + ".py"
+                  if os.path.exists(path):
+                      return "::".join([path, *parts[i:], name])
+              return f"{classname}::{name}"
+
+
+          def code(text):
+              # A code span keeps <...> from being stripped as HTML.
+              return "`" + text.replace("`", "'") + "`"
+
+
+          print("### Tests\n")
+          if not os.path.exists("junit.xml"):
+              print("No results: pytest did not finish. See the job log.")
+              raise SystemExit
+          root = ET.parse("junit.xml").getroot()
+          counts = {"passed": 0, "failed": 0, "errors": 0, "skipped": 0}
+          bad = []
+          # One outcome per test: a test that fails and then errors in teardown is
+          # counted once, as failed.
+          for case in root.iter("testcase"):
+              failure, error = case.find("failure"), case.find("error")
+              result = failure if failure is not None else error
+              if result is not None:
+                  counts["failed" if failure is not None else "errors"] += 1
+                  bad.append((case, result))
+              elif case.find("skipped") is not None:
+                  counts["skipped"] += 1
+              else:
+                  counts["passed"] += 1
+          seconds = sum(float(s.get("time", 0)) for s in root.iter("testsuite"))
+          print("| Passed | Failed | Errors | Skipped | Time |")
+          print("|---|---|---|---|---|")
+          print(
+              f"| {counts['passed']} | {counts['failed']} | {counts['errors']} "
+              f"| {counts['skipped']} | {seconds:.0f}s |"
+          )
+          if bad:
+              print("\n#### Failed tests\n")
+              for case, result in bad[:50]:
+                  test = code(node_id(case.get("classname", ""), case.get("name", "")))
+                  line = (result.get("message") or "").strip().split("\n")[0][:200]
+                  print(f"- {test}: {code(line)}" if line else f"- {test}")
+              if len(bad) > 50:
+                  print(f"- ...and {len(bad) - 50} more; see the job log.")
+          EOF
+          # No coverage data (pytest interrupted): skip the section rather than
+          # fail this step on top of the real failure.
+          if total=$(coverage report --format=total 2>/dev/null); then
+            {
+              echo
+              echo "### Coverage: ${total}%"
+              echo
+              echo "<details><summary>Files below 100%, lowest first</summary>"
+              echo
+              coverage report --format=markdown --skip-covered --sort=cover
+              echo
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload coverage report
         if: always()

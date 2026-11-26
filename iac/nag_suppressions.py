@@ -122,6 +122,26 @@ def suppress_github_access(stack: Stack) -> None:
     )
     _suppress_by_path(
         stack,
+        "GithubPrReadPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: the PR CI role runs `cdk diff --method=template`, "
+                "which reads deployed templates/stacks across all stacks. CloudFormation "
+                "read actions are not resource-scopable, so they use Resource '*'; these "
+                "are read-only Describe/GetTemplate/List actions, no change-set or data "
+                "access.",
+                applies_to=[
+                    "Action::cloudformation:Describe*",
+                    "Action::cloudformation:List*",
+                    "Resource::*",
+                    "Resource::arn:aws:ssm:us-east-1:554812291621:" "parameter/cdk-bootstrap/*",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
         "ClassifierReleaseMlflowPolicy/Resource",
         [
             NagPackSuppression(
@@ -840,8 +860,9 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                     "Action::s3:List*",
                     "Resource::<devDataBucket68DD117A.Arn>/*",
                     "Resource::<devICDatasetsBucket2F2808E0.Arn>/*",
+                    "Resource::<devICDatasetsBucket2F2808E0.Arn>/datasets/*/*/features/*",
+                    "Resource::<devICDatasetsBucket2F2808E0.Arn>/features/*",
                     "Resource::<devSourcesBucket702F0A74.Arn>/*",
-                    "Resource::arn:aws:s3:::2605-coralnet-public-sources/*",
                     "Resource::arn:aws:s3:::coral-reef-training/mermaid/*",
                     "Resource::arn:aws:s3:::mermaid-config/classifier/*",
                     "Resource::arn:aws:s3:::mermaid-mlflow/*",

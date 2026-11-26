@@ -71,6 +71,18 @@ class SagemakerStack(cdk.Stack):
 
         self.ic_datasets_bucket.grant_read(self.sm_execution_role)
 
+        # Jobs write feature vectors. Only PutObject is granted; the bucket's
+        # denies still force If-None-Match and forbid deletes.
+        self.sm_execution_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["s3:PutObject"],
+                resources=[
+                    self.ic_datasets_bucket.arn_for_objects("features/*"),
+                    self.ic_datasets_bucket.arn_for_objects("datasets/*/*/features/*"),
+                ],
+            )
+        )
+
         CfnOutput(
             self,
             f"{self.prefix}ICDatasetsBucketName",
@@ -108,18 +120,6 @@ class SagemakerStack(cdk.Stack):
         )
 
         self.mermaid_mlflow.grant_read_write(self.sm_execution_role)
-
-        # Feature-vector bucket used by two mermaid-classifier launchers:
-        # the feature-extraction ProcessingJob writes per-source .fv files
-        # and annotations.csv into it; the training launcher reads them back.
-        # Hence read+write, not read-only.
-        self.coralnet_feature_vectors = s3.Bucket.from_bucket_arn(
-            self,
-            f"{self.prefix}CoralnetFeatureVectorsBucket",
-            bucket_arn="arn:aws:s3:::2605-coralnet-public-sources",
-        )
-
-        self.coralnet_feature_vectors.grant_read_write(self.sm_execution_role)
 
         # ECR repositories + shared IAM role for the mermaid-* SageMaker
         # launchers (both classifier and segmentation, both Training and
@@ -708,8 +708,8 @@ class SagemakerStack(cdk.Stack):
         and point classifier).
 
         The denies cover object-level API calls for every principal, admins
-        included: PutObject without If-None-Match under images/, datasets/ and
-        taxonomy/, and DeleteObject/DeleteObjectVersion. Bucket configuration
+        included: PutObject without If-None-Match under images/, datasets/,
+        taxonomy/ and features/, and DeleteObject/DeleteObjectVersion. Bucket configuration
         (the policy itself, lifecycle) is protected by IAM and the CDK
         pipeline, not by these denies. CopyObject into a protected prefix
         must also send If-None-Match: * (403 without it, 412 if the key
@@ -755,6 +755,7 @@ class SagemakerStack(cdk.Stack):
                     bucket.arn_for_objects("images/*"),
                     bucket.arn_for_objects("datasets/*"),
                     bucket.arn_for_objects("taxonomy/*"),
+                    bucket.arn_for_objects("features/*"),
                 ],
                 conditions={
                     "Null": {"s3:if-none-match": "true"},

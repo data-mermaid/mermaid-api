@@ -1,10 +1,8 @@
 from decimal import Decimal
 
-from django.db import transaction
 from django.db.models import Q
 from django_filters import BaseInFilter, RangeFilter
-from rest_framework import serializers, status
-from rest_framework.response import Response
+from rest_framework import serializers
 
 from ...models import (
     BeltFish,
@@ -42,13 +40,7 @@ from ..fish_belt_transect import FishBeltTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
-from . import (
-    BaseProjectMethodSEView,
-    BaseProjectMethodView,
-    clean_sample_event_models,
-    save_model,
-    save_one_to_many,
-)
+from . import BaseProjectMethodSEView, BaseProjectMethodView
 
 
 class BeltFishSerializer(BaseAPISerializer):
@@ -111,95 +103,6 @@ class BeltFishMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
         if prefetches:
             qs = qs.prefetch_related(*prefetches)
         return qs
-
-    @transaction.atomic
-    def update(self, request, project_pk, pk=None):
-        errors = {}
-        is_valid = True
-        nested_data = dict(
-            sample_event=request.data.get("sample_event"),
-            fishbelt_transect=request.data.get("fishbelt_transect"),
-            observers=request.data.get("observers"),
-            obs_belt_fishes=request.data.get("obs_belt_fishes"),
-        )
-        belt_fish_data = {k: v for k, v in request.data.items() if k not in nested_data}
-        belt_fish_id = belt_fish_data["id"]
-
-        context = dict(request=request)
-
-        # Save models in a transaction
-        sid = transaction.savepoint()
-        try:
-            belt_fish = BeltFish.objects.get(id=belt_fish_id)
-
-            # Observers
-            check, errs = save_one_to_many(
-                foreign_key=("transectmethod", belt_fish_id),
-                database_records=belt_fish.observers.all(),
-                data=request.data.get("observers") or [],
-                serializer_class=ObserverSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["observers"] = errs
-
-            # Observations
-            check, errs = save_one_to_many(
-                foreign_key=("beltfish", belt_fish_id),
-                database_records=belt_fish.beltfish_observations.all(),
-                data=request.data.get("obs_belt_fishes") or [],
-                serializer_class=ObsBeltFishSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["obs_belt_fishes"] = errs
-
-            # Sample Event
-            check, errs = save_model(
-                data=nested_data["sample_event"],
-                serializer_class=SampleEventSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["sample_event"] = errs
-
-            # Fishbelt Transect
-            check, errs = save_model(
-                data=nested_data["fishbelt_transect"],
-                serializer_class=FishBeltTransectSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["fishbelt_transect"] = errs
-
-            # Belt Fish
-            check, errs = save_model(
-                data=belt_fish_data,
-                serializer_class=BeltFishSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["belt_fish"] = errs
-
-            if is_valid is False:
-                transaction.savepoint_rollback(sid)
-                return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
-
-            clean_sample_event_models(nested_data["sample_event"])
-
-            transaction.savepoint_commit(sid)
-
-            belt_fish = BeltFish.objects.get(id=belt_fish_id)
-            return Response(BeltFishMethodSerializer(belt_fish).data, status=status.HTTP_200_OK)
-
-        except:
-            transaction.savepoint_rollback(sid)
-            raise
 
 
 class BeltFishMethodObsSerializer(BaseSUViewAPISerializer):
