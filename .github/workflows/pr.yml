@@ -52,6 +52,14 @@ jobs:
           version: "0.1.6"
           args: "format --check"
 
+  # Build the API image and scan it with Trivy (see _image-scan.yml).
+  image-scan:
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/_image-scan.yml
+
   # Tests run before deploys (see deploy-cdk.yml), not on every PR. PRs only
   # surface the cdk diff + nag report.
   cdk-diff:
