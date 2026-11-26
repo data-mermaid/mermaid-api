@@ -167,12 +167,12 @@ jobs:
           egress-policy: audit
 
       # Pinned: this code runs with a dev-API token. Bump the SHA deliberately after
-      # reviewing mermaidr changes. Currently the head of data-mermaid/mermaidr#166
-      # (MERMAID_TOKEN / MERMAID_API_URL support); move to its merge commit once merged.
+      # reviewing mermaidr changes. Currently the merge commit of data-mermaid/mermaidr#166
+      # (mermaidr 2.0.1: MERMAID_TOKEN / MERMAID_API_URL support).
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: data-mermaid/mermaidr
-          ref: 4cde0fff5dda3f7101600876f7a8901641d0e9be
+          ref: 3000c635211363bd8aba9332dcfe11a9f7dcc31c
           path: mermaidr
           persist-credentials: false
 
