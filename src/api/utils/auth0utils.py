@@ -4,13 +4,13 @@ import secrets
 import string
 from urllib.request import urlopen
 
+import jwt
 from auth0.authentication import GetToken
 from auth0.authentication.exceptions import Auth0Error
 from auth0.management import ManagementClient
 from auth0.management.core.api_error import ApiError
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext as _
-from jose import jws, jwt
 from requests.exceptions import ConnectionError, ReadTimeout, Timeout
 from rest_framework import exceptions
 from rest_framework.authentication import get_authorization_header
@@ -111,22 +111,10 @@ class Auth0ManagementAPI:
 
 def is_hs_token(token):
     try:
-        jwt.decode(
-            token,
-            settings.MERMAID_API_SIGNING_SECRET,
-            options={
-                "verify_signature": False,
-                "verify_aud": False,
-                "verify_iat": False,
-                "verify_exp": False,
-                "verify_nbf": False,
-                "verify_iss": False,
-                "verify_sub": False,
-                "verify_jti": False,
-            },
-        )
+        # Without signature verification PyJWT also skips every claim check.
+        jwt.decode(token, options={"verify_signature": False})
         return True
-    except jwt.JWTError:
+    except jwt.InvalidTokenError:
         return False
 
 
@@ -206,7 +194,7 @@ def get_user_info(user_id):
 
 
 def get_token_algorithm(token):
-    unverified_header = jws.get_unverified_header(token)
+    unverified_header = jwt.get_unverified_header(token)
     return unverified_header.get("alg")
 
 
@@ -235,17 +223,21 @@ def decode_rsa(token):
     try:
         return jwt.decode(
             token,
-            rsa_key,
+            jwt.PyJWK(rsa_key, algorithm="RS256"),
             algorithms=["RS256"],
             audience=settings.SPA_ADMIN_CLIENT_ID,
             issuer=f"https://{settings.AUTH0_DOMAIN}/",
-            # access_token='',
-            options={"verify_at_hash": False},
         )
     except jwt.ExpiredSignatureError:
         raise exceptions.AuthenticationFailed("token is expired")
 
-    except jwt.JWTClaimsError as clmerr:
+    except (
+        jwt.InvalidAudienceError,
+        jwt.InvalidIssuerError,
+        jwt.ImmatureSignatureError,
+        jwt.InvalidIssuedAtError,
+        jwt.MissingRequiredClaimError,
+    ) as clmerr:
         print(clmerr)
         raise exceptions.AuthenticationFailed("incorrect claims")
     except Exception:
@@ -261,7 +253,7 @@ def decode_hs(token):
             audience=settings.MERMAID_API_AUDIENCE,
             algorithms=["HS256"],
         )
-    except jwt.JWTError as e:
+    except jwt.InvalidTokenError as e:
         logger.debug(f"Decode token failed: {str(e)}")
         raise exceptions.AuthenticationFailed(e)
 
@@ -278,7 +270,7 @@ def decode(token):
 
 
 def get_unverified_profile(token):
-    payload = jwt.get_unverified_claims(token)
+    payload = jwt.decode(token, options={"verify_signature": False})
     return _get_profile(payload)
 
 
