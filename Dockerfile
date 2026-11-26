@@ -1,6 +1,5 @@
-# Base image versions. DEBIAN_CODENAME also selects the PGDG apt repo, so it
-# must match the base image's Debian release.
-ARG PYTHON_VERSION=3.13
+# DEBIAN_CODENAME selects the PGDG apt repo, so it must match the Debian release
+# in the base image tag on the `FROM ... AS base` line below.
 ARG DEBIAN_CODENAME=bookworm
 
 # App user and paths, shared by all stages. ENV PATH/PYTHONPATH and APP_DIR are
@@ -14,8 +13,17 @@ ARG APP_UID=1000
 # Both later stages take libpq from PGDG, so psycopg's C module is compiled
 # against the same libpq it runs on. Built against an older one, it leaves out
 # the newer libpq functions.
-FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS base
+#
+# Pinned by digest so every rebuild uses the same base. The reference is literal
+# (no ARGs) because Dependabot cannot resolve ARGs in FROM; it opens a PR when
+# the digest changes (.github/dependabot.yml).
+FROM python:3.13-slim-bookworm@sha256:f0fa218d5b06f9b9235024fa061cde2cb141f726de52134471053d2d9b5324a3 AS base
 ARG DEBIAN_CODENAME
+
+# Run RUN lines with bash and pipefail, so a failing command inside a pipe (the
+# PGDG key fingerprint check below) fails the build. The image's /bin/sh is
+# dash, which has no pipefail. Later stages inherit this.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ENV DEBIAN_FRONTEND=noninteractive
 

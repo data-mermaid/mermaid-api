@@ -12,7 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ..exceptions import check_uuid
-from ..models import Project
+from ..models import AuditRecord, Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
 from ..signals.classification import post_edit
@@ -23,7 +23,7 @@ from ..utils.duplicates import (
     find_duplicate_managements,
     find_duplicate_sites,
 )
-from ..utils.sample_unit_methods import edit_transect_method
+from ..utils.sample_unit_methods import create_audit_record, edit_transect_method
 
 
 class ProtectedResourceMixin:
@@ -237,6 +237,39 @@ class SampleUnitMethodEditMixin:
         return edit_transect_method(
             self.serializer_class, collect_record_owner, request, pk, model.protocol
         )
+
+    # Submitted data changes only via /edit/ -> collect record -> submit, so that
+    # submission validation runs. "put" stays in http_method_names for /edit/.
+    DIRECT_WRITE_NOT_ALLOWED = (
+        "Submitted records cannot be updated directly. Ask a project admin to move the "
+        "record back to Collecting, then edit and resubmit it."
+    )
+
+    @property
+    def allowed_methods(self):
+        # Keep the detail route from advertising PUT/PATCH (Allow header, OPTIONS);
+        # the /edit/ route's action_map maps PUT to "edit", so it still lists PUT.
+        blocked = {
+            method.upper()
+            for method, action_name in (getattr(self, "action_map", None) or {}).items()
+            if action_name in ("update", "partial_update")
+        }
+        return [m for m in super().allowed_methods if m not in blocked]
+
+    def update(self, request, *args, **kwargs):
+        raise exceptions.MethodNotAllowed(request.method, detail=self.DIRECT_WRITE_NOT_ALLOWED)
+
+    def partial_update(self, request, *args, **kwargs):
+        raise exceptions.MethodNotAllowed(request.method, detail=self.DIRECT_WRITE_NOT_ALLOWED)
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        locked = type(instance).objects.select_for_update().filter(pk=instance.pk).first()
+        if locked is None:
+            raise exceptions.NotFound()
+
+        create_audit_record(self.request.user.profile, AuditRecord.DELETE_RECORD_EVENT_TYPE, locked)
+        locked.delete()
 
     @transaction.atomic
     @action(detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission])

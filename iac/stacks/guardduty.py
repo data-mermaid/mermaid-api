@@ -176,10 +176,12 @@ def handler(event, context):
             )
         )
 
-        for idx, bucket_name in enumerate(s3_buckets):
+        for bucket_name in s3_buckets:
+            # Keyed by bucket name, not list position: a plan's bucket can't be changed in place,
+            # so removing one bucket must not shift the other plans onto different buckets.
             protection_plan = guardduty.CfnMalwareProtectionPlan(
                 self,
-                f"MalwareProtectionPlan-{self.region}-{idx}",
+                f"MalwareProtectionPlan-{bucket_name}",
                 protected_resource=guardduty.CfnMalwareProtectionPlan.CFNProtectedResourceProperty(
                     s3_bucket=guardduty.CfnMalwareProtectionPlan.S3BucketProperty(
                         bucket_name=bucket_name,
