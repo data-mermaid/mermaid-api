@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
-from django.db.models import JSONField, OuterRef, Prefetch, Subquery
+from django.db.models import Exists, JSONField, OuterRef, Prefetch, Subquery
 from django.db.models.expressions import RawSQL
 from psycopg.errors import UniqueViolation
 from rest_framework import exceptions, permissions, serializers, status
@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
+    AuthUser,
     CollectRecord,
     Management,
     Profile,
@@ -106,6 +107,11 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
             profiles = getattr(obj, "profiles_by_name", None)
             if profiles is None:
                 profiles = get_profiles(obj)
+            else:
+                # Profile.has_account reads this instead of querying authusers
+                for pp in profiles:
+                    if hasattr(pp, "profile_has_account"):
+                        pp.profile._has_account = pp.profile_has_account
             self._cached_profiles[project_id] = profiles
         return self._cached_profiles[project_id]
 
@@ -345,9 +351,15 @@ class ProjectViewSet(BaseApiViewSet):
                 # the only profiles prefetch: members, admins and citations all read it
                 Prefetch(
                     "profiles",
-                    queryset=ProjectProfile.objects.select_related("profile").order_by(
-                        "profile__last_name", "profile__first_name"
-                    ),
+                    queryset=ProjectProfile.objects.select_related("profile")
+                    .annotate(
+                        # read by Profile.full_name via has_account for
+                        # nameless admins; copied onto pp.profile in _get_profiles
+                        profile_has_account=Exists(
+                            AuthUser.objects.filter(profile_id=OuterRef("profile_id"))
+                        )
+                    )
+                    .order_by("profile__last_name", "profile__first_name"),
                     to_attr="profiles_by_name",
                 ),
             )

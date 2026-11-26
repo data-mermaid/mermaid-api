@@ -637,12 +637,68 @@ def test_project_showall_list_query_count_constant(
     num_queries_small = len(ctx.captured_queries)
 
     expected.update(_add_projects_with_sites_and_admins(2, 6, countries, site_choices))
-    # Profile.full_name runs one authusers COUNT per nameless admin (2 per project).
-    # Prefetching authusers costs more than it saves: nameless admins are rare.
-    nameless_admins_added = 6 * 2
-    with django_assert_max_num_queries(num_queries_small + nameless_admins_added):
+    with django_assert_max_num_queries(num_queries_small):
         response = api_client1.get(url, format="json")
     assert response.status_code == 200
     data = response.json()
     assert len([p for p in data["results"] if p["name"].startswith("Showall")]) == 8
     _assert_showall_output(data, expected)
+
+
+def _add_projects_with_nameless_admins(start, count):
+    """Each project gets two admins with no first or last name: one with an account
+    (named by email prefix) and one pending (no account)."""
+    expected = {}
+    for i in range(start, start + count):
+        project = Project.objects.create(name=f"Nameless Admins Project {i}", status=Project.OPEN)
+        connected = Profile.objects.create(email=f"connected{i}@mermaidcollect.org")
+        AuthUser.objects.create(profile=connected, user_id=f"test|connected{i}")
+        pending = Profile.objects.create(email=f"pendingadmin{i}@mermaidcollect.org")
+        for profile in (connected, pending):
+            ProjectProfile.objects.create(
+                project=project, profile=profile, role=ProjectProfile.ADMIN
+            )
+        expected[project.name] = sorted(
+            [
+                {"id": str(connected.id), "name": f"connected{i}"},
+                {"id": str(pending.id), "name": "(pending user)"},
+            ],
+            key=lambda a: a["id"],
+        )
+    return expected
+
+
+def _assert_nameless_admins(data, expected):
+    by_name = {p["name"]: p for p in data["results"]}
+    for name, admins in expected.items():
+        assert sorted(by_name[name]["project_admins"], key=lambda a: a["id"]) == admins
+
+
+def test_project_showall_nameless_admins_no_authusers_query_per_admin(
+    api_client1, project_profile1, django_assert_max_num_queries
+):
+    """Profile.full_name checks has_account for nameless profiles; the
+    profile_has_account annotation means it must not query authusers once per admin."""
+    url = "/v1/projects/?showall=true&limit=1000"
+
+    expected = _add_projects_with_nameless_admins(0, 1)
+    with CaptureQueriesContext(connection) as ctx:
+        response = api_client1.get(url, format="json")
+    assert response.status_code == 200
+    _assert_nameless_admins(response.json(), expected)
+    num_queries_1x = len(ctx.captured_queries)
+    # Any per-profile authuser lookup (COUNT, EXISTS, or a fetch) filters on
+    # authuser.profile_id; the only one allowed is the Exists annotation on the
+    # profiles prefetch. (The JWT auth lookup filters on user_id, not profile_id.)
+    per_profile_authuser_queries = [
+        q["sql"]
+        for q in ctx.captured_queries
+        if '"authuser"."profile_id"' in q["sql"] and 'FROM "project_profile"' not in q["sql"]
+    ]
+    assert per_profile_authuser_queries == []
+
+    expected.update(_add_projects_with_nameless_admins(1, 5))
+    with django_assert_max_num_queries(num_queries_1x):
+        response = api_client1.get(url, format="json")
+    assert response.status_code == 200
+    _assert_nameless_admins(response.json(), expected)

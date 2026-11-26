@@ -105,7 +105,7 @@ class Profile(models.Model):
             return self.first_name
         elif self.last_name:
             return self.last_name
-        elif self.num_account_connections == 0:
+        elif not self.has_account:
             return "(pending user)"
         else:
             try:
@@ -123,6 +123,15 @@ class Profile(models.Model):
             return self.last_name.title()
         else:
             return None
+
+    @property
+    def has_account(self):
+        # set by ProjectSerializer._get_profiles from an Exists annotation, so the
+        # project list doesn't query once per nameless profile
+        has_account = getattr(self, "_has_account", None)
+        if has_account is not None:
+            return has_account
+        return self.authusers.exists()
 
     @property
     def num_account_connections(self):
