@@ -226,8 +226,6 @@ guardduty_stack = GuardDutyStack(
         "assets.datamermaid.org",
         "collect-turndown.datamermaid.org",
         "config-bucket-554812291621",
-        "dashboard2.datamermaid.org",
-        "dev-dashboard2.datamermaid.org",
         "dev-datamermaid-sm-data",
         "dev-datamermaid-sm-sources",
         "dev-explore.datamermaid.org",
@@ -246,7 +244,6 @@ guardduty_stack = GuardDutyStack(
         "pyspacer-test",
         "sagemaker-studio-554812291621-moo6nyhibza",
         "sagemaker-us-east-1-554812291621",
-        "vpcflowlogs.admin.datamermaid.org",
     ],
 )
 

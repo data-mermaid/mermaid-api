@@ -1,7 +1,4 @@
-import uuid
-
 from django.http import HttpResponseBadRequest
-from django.utils.translation import gettext_lazy as _
 from rest_framework.decorators import action
 from rest_framework_gis.pagination import GeoJsonPagination
 
@@ -17,64 +14,6 @@ from ...reports import csv_report
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
 from ...utils import cached, safe_get_valid_filename, truthy
 from ...utils.sample_units import consolidate_sample_events, has_duplicate_sample_events
-
-
-def save_one_to_many(foreign_key, database_records, data, serializer_class, context):
-    model_class = serializer_class.Meta.model
-    invalid_count = 0
-    errors = []
-
-    # Check for deleted records
-    # Fetch existing records in database and see
-    # if they exist in request.data
-    delete_lookup = [o["id"] for o in data if "id" in o and o["id"] is not None]
-    for db_record in database_records:
-        if db_record.id not in delete_lookup:
-            db_record.delete()
-
-    for data_rec in data:
-        rec_id = data_rec.get("id")
-        fk = data_rec.get(foreign_key[0])
-        # If any new records don't have FK, fill it
-        if fk is None:
-            data_rec[foreign_key[0]] = foreign_key[1]
-
-        # Create new record
-        if rec_id is None:
-            data_rec["id"] = uuid.uuid4()
-            serializer = serializer_class(data=data_rec, context=context)
-        else:
-            try:
-                # Update existing record
-                instance = model_class.objects.get(id=rec_id)
-                serializer = serializer_class(instance, data=data_rec, context=context)
-            except ObjectDoesNotExist:
-                # Id provided but new record
-                serializer = serializer_class(data=data_rec, context=context)
-
-        if serializer.is_valid() is False:
-            errors.append(serializer.errors)
-            invalid_count += 1
-            continue
-
-        serializer.save()
-
-    return invalid_count == 0, errors
-
-
-def save_model(data, serializer_class, context):
-    model_class = serializer_class.Meta.model
-    instance_id = data.get("id")
-    instance = model_class.objects.get_or_none(id=instance_id)
-    if instance is None:
-        return False, [_("Does not exist")]
-    else:
-        serializer = serializer_class(instance, data=data, context=context)
-        if serializer.is_valid() is False:
-            return False, serializer.errors
-
-    serializer.save()
-    return True, None
 
 
 def clean_sample_event_models(data):

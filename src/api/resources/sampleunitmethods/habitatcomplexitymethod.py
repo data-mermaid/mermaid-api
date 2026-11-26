@@ -1,9 +1,7 @@
 from decimal import Decimal
 
-from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
-from rest_framework import serializers, status
-from rest_framework.response import Response
+from rest_framework import serializers
 
 from ...models import (
     HabitatComplexity,
@@ -41,13 +39,7 @@ from ..benthic_transect import BenthicTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
-from . import (
-    BaseProjectMethodSEView,
-    BaseProjectMethodView,
-    clean_sample_event_models,
-    save_model,
-    save_one_to_many,
-)
+from . import BaseProjectMethodSEView, BaseProjectMethodView
 
 
 class HabitatComplexitySerializer(BaseAPISerializer):
@@ -99,98 +91,6 @@ class HabitatComplexityMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewS
     )
     serializer_class = HabitatComplexityMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
-
-    @transaction.atomic
-    def update(self, request, project_pk, pk=None):
-        errors = {}
-        is_valid = True
-        nested_data = dict(
-            sample_event=request.data.get("sample_event"),
-            benthic_transect=request.data.get("benthic_transect"),
-            observers=request.data.get("observers"),
-            obs_habitat_complexities=request.data.get("obs_habitat_complexities"),
-        )
-        habitat_complexity_data = {k: v for k, v in request.data.items() if k not in nested_data}
-        habitat_complexity_id = habitat_complexity_data["id"]
-
-        context = dict(request=request)
-
-        # Save models in a transaction
-        sid = transaction.savepoint()
-        try:
-            habitat_complexity = HabitatComplexity.objects.get(id=habitat_complexity_id)
-
-            # Observers
-            check, errs = save_one_to_many(
-                foreign_key=("transectmethod", habitat_complexity_id),
-                database_records=habitat_complexity.observers.all(),
-                data=request.data.get("observers") or [],
-                serializer_class=ObserverSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["observers"] = errs
-
-            # Observations
-            check, errs = save_one_to_many(
-                foreign_key=("habitatcomplexity", habitat_complexity_id),
-                database_records=habitat_complexity.habitatcomplexity_set.all(),
-                data=request.data.get("obs_habitat_complexities") or [],
-                serializer_class=ObsHabitatComplexitySerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["obs_habitat_complexities"] = errs
-
-            # Sample Event
-            check, errs = save_model(
-                data=nested_data["sample_event"],
-                serializer_class=SampleEventSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["sample_event"] = errs
-
-            # Benthic Transect
-            check, errs = save_model(
-                data=nested_data["benthic_transect"],
-                serializer_class=BenthicTransectSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["benthic_transect"] = errs
-
-            # Habitat Complexity
-            check, errs = save_model(
-                data=habitat_complexity_data,
-                serializer_class=HabitatComplexitySerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["habitat_complexity"] = errs
-
-            if is_valid is False:
-                transaction.savepoint_rollback(sid)
-                return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
-
-            clean_sample_event_models(nested_data["sample_event"])
-
-            transaction.savepoint_commit(sid)
-
-            habitat_complexity = HabitatComplexity.objects.get(id=habitat_complexity_id)
-            return Response(
-                HabitatComplexityMethodSerializer(habitat_complexity).data,
-                status=status.HTTP_200_OK,
-            )
-
-        except:
-            transaction.savepoint_rollback(sid)
-            raise
 
 
 class HabitatComplexityMethodObsSerializer(BaseSUViewAPISerializer):
