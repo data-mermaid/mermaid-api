@@ -1,0 +1,33 @@
+# Dependabot version updates (card 2283).
+# Dependabot reads this file from the default branch (master), but PRs target
+# dev, where pr.yml runs the image scan and lint on them.
+version: 2
+updates:
+  # Base image in Dockerfile, pinned by tag and digest.
+  - package-ecosystem: docker
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    # Wait a week before proposing a new release, so a hijacked or broken
+    # release has time to be caught and pulled first.
+    cooldown:
+      default-days: 7
+    ignore:
+      # Only refresh the digest of python:3.13-slim-bookworm (Debian and Python
+      # patch fixes). A move to a new Python minor version is a deliberate
+      # upgrade, not a weekly bump.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  # SHA-pinned actions in .github/workflows. One grouped PR per week.
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
