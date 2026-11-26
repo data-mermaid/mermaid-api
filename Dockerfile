@@ -17,6 +17,11 @@ ARG APP_UID=1000
 FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS base
 ARG DEBIAN_CODENAME
 
+# Run RUN lines with bash and pipefail, so a failing command inside a pipe (the
+# PGDG key fingerprint check below) fails the build. The image's /bin/sh is
+# dash, which has no pipefail. Later stages inherit this.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
