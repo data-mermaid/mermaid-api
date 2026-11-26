@@ -127,6 +127,19 @@ test:
 testfast:
 	docker compose exec $(API_SERVICE) pytest -n $(PYTEST_WORKERS) --no-migrations --reuse-db $(PYTEST_ARGS) api/tests
 
+# Re-pin constraints.txt (indirect Python dependencies, card 2285) from what the
+# image's builder stage installs. Existing pins are kept; packages no longer
+# installed are dropped. If the build reports conflicting dependencies, delete the
+# pin it names and rerun. To upgrade every indirect dependency, delete all the pins
+# (keep the comment lines) and rerun.
+constraints:
+	docker build --target builder -t mermaid-api:constraints .
+	{ grep '^#' constraints.txt; \
+	  docker run --rm -u webapp --entrypoint python mermaid-api:constraints -m pip freeze --user \
+	    | grep -viE "^($$(sed -nE 's/^([A-Za-z0-9][A-Za-z0-9._-]*).*/\1/p' requirements.txt | paste -sd'|' -))(==| @ )"; \
+	} > constraints.txt.new
+	mv constraints.txt.new constraints.txt
+
 # -----------------
 # Fargate Maintenance (docker exec)
 # -----------------
