@@ -192,6 +192,11 @@ REST_FRAMEWORK = {
     ),
     "COERCE_DECIMAL_TO_STRING": False,
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.openapi.AutoSchema",
+    # DRF 3.18 changed many=True validation errors from a list (one entry per
+    # item) to a dict keyed by index. Keep the list format that API clients and
+    # the CSV ingest error report (ingest/serializers.formatted_errors) expect.
+    # shortcut: the list format is removed in DRF 3.20; migrate those callers first.
+    "LIST_SERIALIZER_ERRORS_AS_DICT": False,
 }
 
 # Database SSL. RDS enforces SSL (rds.force_ssl=1) in dev/prod, so require it
