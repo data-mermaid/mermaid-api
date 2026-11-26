@@ -372,6 +372,7 @@ class CommonStack(Stack):
                 removal_policy=RemovalPolicy.RETAIN,
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                encryption=s3.BucketEncryption.S3_MANAGED,
                 enforce_ssl=True,
                 server_access_logs_bucket=vpc_flow_logs_access_logs_bucket,
                 server_access_logs_prefix="athena-results-bucket/",
@@ -508,6 +509,10 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            # Encrypt at rest + reject non-TLS requests (card 2263); matches the
+            # flow-logs/athena/alb-logs buckets.
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
         )
 
         self.config_bucket = s3.Bucket(
@@ -517,6 +522,8 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
         )
 
         # Shared (dev/prod) ECR repo for the pyspacer inference Lambda image.
@@ -555,6 +562,8 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
             lifecycle_rules=[
                 # Rules for cleaning up report files after 14 days.
                 s3.LifecycleRule(
@@ -576,8 +585,29 @@ class CommonStack(Stack):
             id="MermaidImageProcessingBackupBucket",
             bucket_name="mermaid-image-processing",
             removal_policy=RemovalPolicy.RETAIN,
+            # This bucket is intentionally public-read (card 2263). In dev,
+            # ic_bucket_name resolves to this bucket, and the API serves images
+            # to the UI as unsigned URLs (AWS_QUERYSTRING_AUTH = False), so the
+            # objects must be anonymously GET-able. The live bucket is public via
+            # an out-of-band bucket policy while the CDK construct declared
+            # BLOCK_ALL. We reconcile ONLY the block-public-access settings here
+            # so a future deploy cannot silently re-block the bucket and break
+            # dev + prod-test image viewing. We deliberately do NOT add a managed
+            # bucket policy (no explicit statement, no enforce_ssl): S3 allows
+            # only one policy per bucket, and CloudFormation refuses to create
+            # one when an out-of-band policy already exists ("The bucket policy
+            # already exists"), which fails the whole stack. The public-read
+            # policy therefore stays out-of-band; the block settings below are
+            # what make the public access survive deploys. Public ACLs stay
+            # blocked.
             public_read_access=False,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            block_public_access=s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=False,
+                restrict_public_buckets=False,
+            ),
+            encryption=s3.BucketEncryption.S3_MANAGED,
             cors=[
                 s3.CorsRule(
                     allowed_methods=[

@@ -122,6 +122,26 @@ def suppress_github_access(stack: Stack) -> None:
     )
     _suppress_by_path(
         stack,
+        "GithubPrReadPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: the PR CI role runs `cdk diff --method=template`, "
+                "which reads deployed templates/stacks across all stacks. CloudFormation "
+                "read actions are not resource-scopable, so they use Resource '*'; these "
+                "are read-only Describe/GetTemplate/List actions, no change-set or data "
+                "access.",
+                applies_to=[
+                    "Action::cloudformation:Describe*",
+                    "Action::cloudformation:List*",
+                    "Resource::*",
+                    "Resource::arn:aws:ssm:us-east-1:554812291621:" "parameter/cdk-bootstrap/*",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
         "ClassifierReleaseMlflowPolicy/Resource",
         [
             NagPackSuppression(
@@ -274,7 +294,6 @@ def suppress_common(stack: Stack) -> None:
         "MermaidApiBackupBucket/Resource",
         "MermaidApiConfigBucket/Resource",
         "MermaidApiDataBucket/Resource",
-        "MermaidImageProcessingBackupBucket/Resource",
     ]
     for bucket_path in s3_bucket_paths:
         _suppress_by_path(
@@ -285,12 +304,44 @@ def suppress_common(stack: Stack) -> None:
                     id="AwsSolutions-S1",
                     reason=f"{TODO}: Enable server access logging on this S3 bucket.",
                 ),
-                NagPackSuppression(
-                    id="AwsSolutions-S10",
-                    reason=f"{TODO}: Add aws:SecureTransport condition to the bucket policy.",
-                ),
             ],
         )
+
+    # mermaid-image-processing is intentionally public-read (card 2263): in dev
+    # it is the image bucket the API serves to the UI as unsigned URLs, so the
+    # objects must be anonymously GET-able. S2 (block public access) is therefore
+    # suppressed by design; public access is granted by an out-of-band bucket
+    # policy (not managed by CDK — S3 allows only one policy per bucket and CFN
+    # cannot create one over an existing one), and public ACLs stay blocked.
+    # S10 (TLS-only bucket policy) is suppressed too: we do not attach a managed
+    # policy here, so enforce_ssl is not applied to this bucket.
+    _suppress_by_path(
+        stack,
+        "MermaidImageProcessingBackupBucket/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-S1",
+                reason=f"{TODO}: Enable server access logging on this S3 bucket.",
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-S2",
+                reason=(
+                    "Intentional: this bucket serves images to the UI as unsigned "
+                    "public URLs (AWS_QUERYSTRING_AUTH=False). Public access is "
+                    "granted by an out-of-band bucket policy; public ACLs remain "
+                    "blocked."
+                ),
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-S10",
+                reason=(
+                    f"{TODO}: Not managing this bucket's policy in CDK (an "
+                    "out-of-band public-read policy already exists), so "
+                    "enforce_ssl is not applied here."
+                ),
+            ),
+        ],
+    )
 
     # --- KMS ---
     _suppress_by_path(
@@ -545,10 +596,8 @@ def suppress_static_site(stack: Stack) -> None:
                     id="AwsSolutions-S1",
                     reason=f"{TODO}: Enable server access logging on the static site bucket.",
                 ),
-                NagPackSuppression(
-                    id="AwsSolutions-S10",
-                    reason=f"{TODO}: Add aws:SecureTransport condition to the bucket policy.",
-                ),
+                # S10 (aws:SecureTransport) is now satisfied: the bucket sets
+                # enforce_ssl=True (card 2263), so the suppression is removed.
             ],
         )
 
@@ -811,8 +860,9 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                     "Action::s3:List*",
                     "Resource::<devDataBucket68DD117A.Arn>/*",
                     "Resource::<devICDatasetsBucket2F2808E0.Arn>/*",
+                    "Resource::<devICDatasetsBucket2F2808E0.Arn>/datasets/*/*/features/*",
+                    "Resource::<devICDatasetsBucket2F2808E0.Arn>/features/*",
                     "Resource::<devSourcesBucket702F0A74.Arn>/*",
-                    "Resource::arn:aws:s3:::2605-coralnet-public-sources/*",
                     "Resource::arn:aws:s3:::coral-reef-training/mermaid/*",
                     "Resource::arn:aws:s3:::mermaid-config/classifier/*",
                     "Resource::arn:aws:s3:::mermaid-mlflow/*",

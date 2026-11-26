@@ -1,0 +1,8 @@
+# hadolint config (card 2280). CI fails on findings of warning level or above.
+failure-threshold: warning
+ignored:
+  # DL3008 (pin apt package versions): Debian replaces old package versions in
+  # its archive when it ships security fixes, so exact pins break rebuilds.
+  # Instead, the base image is pinned by digest and the image scan
+  # (_image-scan.yml) catches vulnerable packages.
+  - DL3008

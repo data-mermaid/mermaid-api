@@ -29,6 +29,11 @@ class StaticSiteStack(Stack):
             bucket_name=config.api.public_bucket,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            # Encrypt at rest + reject non-TLS requests (card 2263). CloudFront reaches
+            # the bucket over HTTPS via the OAI, so enforce_ssl does not affect serving;
+            # it blocks direct plaintext S3 API access to objects.
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
         )
 
         CfnOutput(

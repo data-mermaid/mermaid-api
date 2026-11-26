@@ -1,7 +1,4 @@
-from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
-from rest_framework import status
-from rest_framework.response import Response
 
 from ...models import (
     BenthicLIT,
@@ -42,13 +39,7 @@ from ..benthic_transect import BenthicTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
-from . import (
-    BaseProjectMethodSEView,
-    BaseProjectMethodView,
-    clean_sample_event_models,
-    save_model,
-    save_one_to_many,
-)
+from . import BaseProjectMethodSEView, BaseProjectMethodView
 
 
 class BenthicLITSerializer(BaseAPISerializer):
@@ -89,95 +80,6 @@ class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     )
     serializer_class = BenthicLITMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
-
-    @transaction.atomic
-    def update(self, request, project_pk, pk=None):
-        errors = {}
-        is_valid = True
-        nested_data = dict(
-            sample_event=request.data.get("sample_event"),
-            benthic_transect=request.data.get("benthic_transect"),
-            observers=request.data.get("observers"),
-            obs_benthic_lits=request.data.get("obs_benthic_lits"),
-        )
-        benthic_lit_data = {k: v for k, v in request.data.items() if k not in nested_data}
-        benthic_lit_id = benthic_lit_data["id"]
-
-        context = dict(request=request)
-
-        # Save models in a transaction
-        sid = transaction.savepoint()
-        try:
-            benthic_lit = BenthicLIT.objects.get(id=benthic_lit_id)
-
-            # Observers
-            check, errs = save_one_to_many(
-                foreign_key=("transectmethod", benthic_lit_id),
-                database_records=benthic_lit.observers.all(),
-                data=request.data.get("observers") or [],
-                serializer_class=ObserverSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["observers"] = errs
-
-            # Observations
-            check, errs = save_one_to_many(
-                foreign_key=("benthiclit", benthic_lit_id),
-                database_records=benthic_lit.obsbenthiclit_set.all(),
-                data=request.data.get("obs_benthic_lits") or [],
-                serializer_class=ObsBenthicLITSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["obs_benthic_lits"] = errs
-
-            # Sample Event
-            check, errs = save_model(
-                data=nested_data["sample_event"],
-                serializer_class=SampleEventSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["sample_event"] = errs
-
-            # Benthic Transect
-            check, errs = save_model(
-                data=nested_data["benthic_transect"],
-                serializer_class=BenthicTransectSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["benthic_transect"] = errs
-
-            # Benthic LIT
-            check, errs = save_model(
-                data=benthic_lit_data,
-                serializer_class=BenthicLITSerializer,
-                context=context,
-            )
-            if check is False:
-                is_valid = False
-                errors["benthic_lit"] = errs
-
-            if is_valid is False:
-                transaction.savepoint_rollback(sid)
-                return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
-
-            clean_sample_event_models(nested_data["sample_event"])
-
-            transaction.savepoint_commit(sid)
-
-            benthic_lit = BenthicLIT.objects.get(id=benthic_lit_id)
-            return Response(BenthicLITMethodSerializer(benthic_lit).data, status=status.HTTP_200_OK)
-
-        except:
-            transaction.savepoint_rollback(sid)
-            raise
 
 
 class BenthicLITMethodObsSerializer(BaseSUViewAPISerializer):
