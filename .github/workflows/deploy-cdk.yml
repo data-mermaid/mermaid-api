@@ -239,12 +239,25 @@ jobs:
           # No automatic retry: a failure is either a regression or a setup problem, and
           # both should surface. If a test project was edited mid-run (SU/SE read the
           # async summary cache), re-run the job.
-          # Fails if any test fails, or if none passed (e.g. every test skipped).
+          # Writes a per-test table to the run's summary page. Fails if any test fails
+          # or errors, or if none passed (e.g. every test skipped).
           MERMAID_TOKEN="$token" Rscript -e '
             res <- as.data.frame(testthat::test_local(
               filter = "mermaid_get_project_data|mermaid_get_summary_sampleevents",
-              stop_on_failure = TRUE
+              stop_on_failure = FALSE
             ))
+            bad <- res[["failed"]] > 0 | res[["error"]]
+            rows <- sprintf("| %s | %s | %s | %d | %d | %d |",
+              ifelse(bad, "❌", ifelse(res[["skipped"]], "⏭️", "✅")),
+              res[["file"]], gsub("|", "\\|", res[["test"]], fixed = TRUE),
+              res[["passed"]], res[["failed"]], as.integer(res[["skipped"]]))
+            cat("### mermaidr aggregate tests\n\n",
+                sprintf("%d passed, %d failed, %d tests with errors, %d skipped.\n\n",
+                  sum(res[["passed"]]), sum(res[["failed"]]), sum(res[["error"]]), sum(res[["skipped"]])),
+                "| | File | Test | Passed | Failed | Skipped |\n|---|---|---|---|---|---|\n",
+                paste(rows, collapse = "\n"), "\n",
+                sep = "", file = Sys.getenv("GITHUB_STEP_SUMMARY"), append = TRUE)
+            if (any(bad)) stop("Aggregate tests failed")
             if (sum(res[["passed"]]) == 0) stop("No aggregate test passed: all skipped or none ran")
           '
 
@@ -289,6 +302,22 @@ jobs:
 
       - name: Generate SBOM (CycloneDX)
         run: trivy image --format cyclonedx --output sbom.cdx.json mermaid-api:sbom
+
+      # Package list on the run's summary page, so it can be read without
+      # downloading the artifact.
+      - name: SBOM summary
+        run: |
+          jq -r '
+            def lic: [.licenses[]?.license | .id // .name // empty] | unique | join(", ");
+            def pkgs(t): [.components[] | select((.purl // "") | startswith("pkg:\(t)/"))] | sort_by(.name | ascii_downcase);
+            def table(t): pkgs(t) | map("| \(.name) | \(.version) | \(lic) |") | join("\n");
+            (.components[] | select(.type == "operating-system")) as $os
+            | ([.metadata.component.properties[]? | select(.name == "aquasecurity:trivy:Size") | .value | tonumber] | first // 0) as $size
+            | "### SBOM (CycloneDX \(.specVersion))\n",
+              "\($os.name) \($os.version), image \($size / 1e6 | floor) MB: \(pkgs("pypi") | length) Python and \(pkgs("deb") | length) Debian packages. The full file is the `api-image-sbom` artifact.\n",
+              "<details><summary>Python packages</summary>\n\n| Package | Version | License |\n|---|---|---|\n\(table("pypi"))\n\n</details>\n",
+              "<details><summary>Debian packages</summary>\n\n| Package | Version | License |\n|---|---|---|\n\(table("deb"))\n\n</details>"
+          ' sbom.cdx.json >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:

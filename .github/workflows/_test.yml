@@ -86,13 +86,14 @@ jobs:
         # Test data is disposable: skip crash-safety work on every commit.
         # max_locks_per_transaction: each pytest-xdist worker creates a full test
         # schema at once, which overflows the default lock table. It needs a restart.
+        env:
+          pg: ${{ job.services.postgres.id }}
         run: |
-          pg=${{ job.services.postgres.id }}
           for setting in "fsync = off" "synchronous_commit = off" "full_page_writes = off" "max_locks_per_transaction = 1024"; do
             docker exec "$pg" psql -U postgres -c "ALTER SYSTEM SET $setting"
           done
           docker restart "$pg"
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             docker exec "$pg" pg_isready -U postgres && exit 0
             sleep 1
           done
@@ -129,7 +130,60 @@ jobs:
         #   term-missing → uncovered lines printed in this job's log (human-readable)
         #   html         → browsable report, uploaded as an artifact below
         #   xml          → machine-readable, for coverage tooling (Codecov, etc.)
-        run: pytest -n auto --durations=25 --no-migrations --cov --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-fail-under=80 -q api/tests
+        # junit.xml feeds the summary step below.
+        run: pytest -n auto --durations=25 --no-migrations --cov --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-fail-under=80 --junitxml=junit.xml -q api/tests
+
+      # Results and coverage on the run's summary page, so they can be read without
+      # downloading the coverage-report artifact.
+      - name: Test summary
+        if: ${{ !cancelled() }}
+        working-directory: src
+        run: |
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import os
+          import xml.etree.ElementTree as ET
+
+          print("### Tests\n")
+          if not os.path.exists("junit.xml"):
+              print("No results: pytest did not finish. See the job log.")
+              raise SystemExit
+          suite = ET.parse("junit.xml").getroot()
+          if suite.tag == "testsuites":
+              suite = suite.find("testsuite")
+          total, failed, errors, skipped = (
+              int(suite.get(k, 0)) for k in ("tests", "failures", "errors", "skipped")
+          )
+          print("| Passed | Failed | Errors | Skipped | Time |")
+          print("|---|---|---|---|---|")
+          print(
+              f"| {total - failed - errors - skipped} | {failed} | {errors} | {skipped} "
+              f"| {float(suite.get('time', 0)):.0f}s |"
+          )
+          bad = [
+              (case, case.find("failure") if case.find("failure") is not None else case.find("error"))
+              for case in suite.iter("testcase")
+          ]
+          bad = [(case, result) for case, result in bad if result is not None]
+          if bad:
+              print("\n#### Failed tests\n")
+              for case, result in bad[:50]:
+                  message = (result.get("message") or "").strip().splitlines()[:1]
+                  print(f"- `{case.get('classname')}::{case.get('name')}`: {''.join(message)[:200]}")
+              if len(bad) > 50:
+                  print(f"- ...and {len(bad) - 50} more; see the job log.")
+          EOF
+          if [ -f .coverage ]; then
+            {
+              echo
+              echo "### Coverage: $(coverage report --format=total)%"
+              echo
+              echo "<details><summary>Files below 100%, lowest first</summary>"
+              echo
+              coverage report --format=markdown --skip-covered --sort=cover
+              echo
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload coverage report
         if: always()
