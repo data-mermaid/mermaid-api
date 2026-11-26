@@ -4,8 +4,9 @@ name: Image scan
 # target CDK deploys (`target="runtime"` in iac/stacks/api.py), loads it locally
 # and never pushes, so it needs no AWS credentials or secrets.
 #
-# Gate (when `gate` is true): fail on a CRITICAL vulnerability that has a fix,
-# or on any secret baked into the image. HIGH and unfixed findings are reported
+# Gate (when `gate` is true): fail if the image does not boot and pass its
+# health check, on a CRITICAL vulnerability that has a fix, or on any secret
+# baked into the image. HIGH and unfixed findings are reported
 # to code scanning but do not fail the job. Accept a finding by adding its ID to
 # a `.trivyignore` at the repo root, with a reason and a review date.
 
@@ -47,6 +48,29 @@ jobs:
       - name: Build image
         id: build
         run: docker build --target runtime -t "$IMAGE" .
+
+      # Boot the image the way ECS does (docker-entry.sh: migrate, then gunicorn)
+      # and wait for the image's own HEALTHCHECK to pass. migrate is left out: the
+      # migrations need an existing database, as restored on dev and prod, and
+      # cannot build a fresh one. /health/ needs no database, so none is started.
+      - name: Smoke test (boot and health check)
+        if: ${{ inputs.gate }}
+        run: |
+          docker run -d --name smoke --health-interval 5s \
+            -e SECRET_KEY=smoke \
+            -e OTEL_TRACES_EXPORTER=none -e OTEL_METRICS_EXPORTER=none -e OTEL_LOGS_EXPORTER=none \
+            "$IMAGE" sh -c "sed '/manage.py migrate/d' docker-entry.sh | sh"
+          for _ in $(seq 36); do
+            status=$(docker inspect -f '{{.State.Status}} {{.State.Health.Status}}' smoke)
+            case "$status" in
+              "running healthy") docker logs smoke 2>&1 | tail -5; exit 0 ;;
+              running*) sleep 5 ;;
+              *) break ;;
+            esac
+          done
+          docker logs smoke 2>&1 | tail -50
+          echo "::error::The image did not become healthy within 3 minutes (container: $status)."
+          exit 1
 
       # Runs first and with !cancelled(), so findings reach code scanning even
       # when a gate step below fails.
