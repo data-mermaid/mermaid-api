@@ -190,6 +190,19 @@ def suppress_github_access(stack: Stack) -> None:
         ],
     )
 
+    _suppress_by_path(
+        stack,
+        "SegmentationImagePushPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: ecr:GetAuthorizationToken does not support "
+                "resource-level permissions — Resource::* is required by the ECR API.",
+                applies_to=["Resource::*"],
+            ),
+        ],
+    )
+
 
 # ---------------------------------------------------------------------------
 # CommonStack
@@ -858,7 +871,8 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                     "Action::s3:GetBucket*",
                     "Action::s3:GetObject*",
                     "Action::s3:List*",
-                    "Resource::<devDataBucket68DD117A.Arn>/*",
+                    "Resource::<devDataBucket68DD117A.Arn>/mlflow/*",
+                    "Resource::<devDataBucket68DD117A.Arn>/runs/*",
                     "Resource::<devICDatasetsBucket2F2808E0.Arn>/*",
                     "Resource::<devICDatasetsBucket2F2808E0.Arn>/datasets/*/*/features/*",
                     "Resource::<devICDatasetsBucket2F2808E0.Arn>/features/*",
