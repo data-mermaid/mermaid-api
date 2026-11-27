@@ -3,6 +3,7 @@ import datetime as dt
 
 from django.conf import settings
 from django.contrib.gis.geos import Point
+from django.http.request import HttpHeaders
 from jose import jwt
 
 from api.models import (
@@ -42,6 +43,11 @@ class MockRequest:
             self.META = {"HTTP_AUTHORIZATION": f"Bearer {token}"}
         else:
             self.META = {}
+
+    @property
+    def headers(self):
+        # DRF >= 3.18 reads the Authorization header from request.headers, not META.
+        return HttpHeaders(self.META)
 
 
 class TestDataMixin:

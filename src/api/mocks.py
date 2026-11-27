@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.http.request import HttpHeaders
 
 from api.utils.tokenutils import create_token
 
@@ -48,6 +49,11 @@ class MockRequest:
             self.META = {"HTTP_AUTHORIZATION": f"Bearer {token}"}
         else:
             self.META = {}
+
+    @property
+    def headers(self):
+        # DRF >= 3.18 reads the Authorization header from request.headers, not META.
+        return HttpHeaders(self.META)
 
     @classmethod
     def _check_for_token(cls, request):
