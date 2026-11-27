@@ -227,7 +227,6 @@ guardduty_stack = GuardDutyStack(
         "collect-turndown.datamermaid.org",
         "config-bucket-554812291621",
         "dev-datamermaid-sm-data",
-        "dev-datamermaid-sm-sources",
         "dev-explore.datamermaid.org",
         "dev-mermaid-cloudtrail-cloudtrailbucket98b0bfe1-qwlw3gr5rvvm",
         "dev-public.datamermaid.org",
