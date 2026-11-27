@@ -148,3 +148,30 @@ def test_project_se_summary_cleaned_up_after_project_deleted(db_setup, project1)
 
     assert not RestrictedProjectSummarySampleEvent.objects.filter(project_id=project_id).exists()
     assert not UnrestrictedProjectSummarySampleEvent.objects.filter(project_id=project_id).exists()
+
+
+def test_project_se_summary_public_hides_depth(
+    db_setup,
+    api_client_public,
+    sample_event1,
+    belt_fish_project,
+    benthic_pit_project,
+    obs_belt_fish1_1_biomass,
+    obs_belt_fish1_2_biomass,
+    obs_belt_fish1_3_biomass,
+    obs_benthic_pit1_3,
+    update_summary_cache,
+):
+    # Card 2292: depth is a sample-unit measurement with no single data policy, so it is
+    # exposed only to callers with access. The public (unrestricted) cache must null it,
+    # even though test_project_se_summary_authenticated shows members still get 7.0/1.73.
+    url = reverse("projectsummarysampleevents-list")
+    response = api_client_public.get(url, None, format="json").json()
+    assert response["count"] == 1
+    record = next(
+        r
+        for r in response["results"][0]["records"]
+        if r["sample_event_id"] == str(sample_event1.pk)
+    )
+    assert record["depth_avg"] is None
+    assert record["depth_sd"] is None
