@@ -37,33 +37,37 @@ class ClassificationStatusViewSet(BaseProjectApiViewSet):
         ProjectDataAdminPermission,
     ]
 
-    def get_queryset(self):
-        show_all = "showall" in self.request.query_params
-        qs = ClassificationStatus.objects.all()
-
-        if show_all is True:
-            return qs
-
-        latest_status_subquery = (
-            ClassificationStatus.objects.filter(image=OuterRef("image"))
-            .order_by("-created_on")
-            .values("id")[:1]
-        )
-
-        return ClassificationStatus.objects.filter(id__in=Subquery(latest_status_subquery))
-
-    def limit_to_project(self, request, *args, **kwargs):
-        qs = self.get_queryset()
-        project_pk = check_uuid(kwargs["project_pk"])
+    def _project_scoped_queryset(self, project_pk):
+        # Statuses whose image belongs to this project, via its collect records or its
+        # submitted benthic-photo-quadrat observations.
         cr_ids = CollectRecord.objects.filter(project_id=project_pk).values_list("id", flat=True)
-        return qs.filter(
+        return ClassificationStatus.objects.filter(
             Q(image__collect_record_id__in=cr_ids)
             | Q(
                 **{
                     f"image__obs_benthic_photo_quadrats__{ObsBenthicPhotoQuadrat.project_lookup}": project_pk
                 }
             )
+        ).distinct()
+
+    def get_queryset(self):
+        # Scope to the URL project here, not only in limit_to_project: get_queryset was
+        # returning the whole table (and the entire table for ?showall), leaking other
+        # projects' classification statuses (card 2290/2231).
+        project_pk = self.kwargs.get("project_pk")
+        if project_pk is None:
+            return ClassificationStatus.objects.none()
+        qs = self._project_scoped_queryset(check_uuid(project_pk))
+
+        if "showall" in self.request.query_params:
+            return qs.order_by("-created_on")
+
+        latest_status_subquery = (
+            ClassificationStatus.objects.filter(image=OuterRef("image"))
+            .order_by("-created_on")
+            .values("id")[:1]
         )
+        return qs.filter(id__in=Subquery(latest_status_subquery)).order_by("-created_on")
 
     def create(self, request, **kwargs):
         raise MethodNotAllowed("POST")
