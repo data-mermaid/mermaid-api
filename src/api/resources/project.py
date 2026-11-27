@@ -386,7 +386,14 @@ class ProjectViewSet(BaseApiViewSet):
         )
         qs = annotate_num_sample_units(qs)
         user = self.request.user
-        show_all = "showall" in self.request.query_params
+        # `showall` drops the membership filter, so it must only widen reads. On a
+        # write method it would let get_object() resolve a project the caller is
+        # not a member of (defence in depth behind the get_project_pk fix, 2249).
+        show_all = "showall" in self.request.query_params and self.request.method in (
+            "GET",
+            "HEAD",
+            "OPTIONS",
+        )
 
         if show_all is True:
             return qs.all()
