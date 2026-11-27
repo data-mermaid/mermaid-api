@@ -114,8 +114,16 @@ class BenthicIntervalObservationCountValidator(BaseValidator):
     INCORRECT_OBSERVATION_COUNT = "incorrect_observation_count"
     NON_POSITIVE = "{}_not_positive"
 
-    def __init__(self, len_surveyed_path, interval_size_path, observations_path, **kwargs):
+    def __init__(
+        self,
+        len_surveyed_path,
+        interval_start_path,
+        interval_size_path,
+        observations_path,
+        **kwargs,
+    ):
         self.len_surveyed_path = len_surveyed_path
+        self.interval_start_path = interval_start_path
         self.interval_size_path = interval_size_path
         self.observations_path = observations_path
         super().__init__(**kwargs)
@@ -127,6 +135,7 @@ class BenthicIntervalObservationCountValidator(BaseValidator):
         observations_count = len(observations)
         len_surveyed = cast_float(self.get_value(collect_record, self.len_surveyed_path))
         interval_size = cast_float(self.get_value(collect_record, self.interval_size_path))
+        interval_start = cast_float(self.get_value(collect_record, self.interval_start_path))
 
         # Treat None as invalid (not positive)
         if len_surveyed is None or len_surveyed <= 0:
@@ -134,7 +143,9 @@ class BenthicIntervalObservationCountValidator(BaseValidator):
         if interval_size is None or interval_size <= 0:
             return ERROR, self.NON_POSITIVE.format("interval_size")
 
-        calc_obs_count = int(math.ceil(len_surveyed / interval_size))
+        calc_obs_count = int(
+            math.ceil(len_surveyed / interval_size - ((interval_start / interval_size) - 1))
+        )
         if (
             observations_count > calc_obs_count + tolerance
             or observations_count < calc_obs_count - tolerance

@@ -12,6 +12,7 @@ from api.submission.validations.validators import (
 def _get_validator():
     return BenthicIntervalObservationCountValidator(
         len_surveyed_path="data.benthic_transect.len_surveyed",
+        interval_start_path="data.interval_start",
         interval_size_path="data.interval_size",
         observations_path="data.obs_habitat_complexities",
     )
