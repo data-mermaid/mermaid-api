@@ -618,7 +618,9 @@ class ProjectViewSet(BaseApiViewSet):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                replace_obj = obj_cls.objects.get(id=qp_replace_obj_id)
+                # Scope the replacement to the URL project too: loading it globally let a
+                # caller merge a find object into another project's object (card 2289).
+                replace_obj = obj_cls.objects.get(id=qp_replace_obj_id, project__id=project_id)
                 find_objs = obj_cls.objects.filter(id__in=qp_find_obj_ids, project__id=project_id)
                 results = replace_sampleunit_objs(find_objs, replace_obj, field, profile)
                 transaction.savepoint_commit(sid)
