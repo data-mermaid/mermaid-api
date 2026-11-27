@@ -11,7 +11,7 @@ from ..reports.summary_report import create_protocol_report
 from . import create_iso_date_string, s3
 from .email import email_report
 from .q import submit_job
-from .summary_cache import wait_for_summary_cache
+from .summary_cache import SUMMARY_REPORT_VISIBILITY_TIMEOUT, wait_for_summary_cache
 
 SAMPLE_UNIT_METHOD_REPORT_TYPE = "summary_sample_unit_method"
 GFCR_REPORT_TYPE = "gfcr"
@@ -63,7 +63,7 @@ def create_sample_unit_method_summary_report_background(
         request=req,
         send_email=send_email,
         wait_for_cache=True,
-        visibility_timeout=180,
+        visibility_timeout=SUMMARY_REPORT_VISIBILITY_TIMEOUT,
     )
 
 

@@ -1,6 +1,7 @@
 import csv
 import gzip
 import io
+import types
 from unittest.mock import patch
 
 import pytest
@@ -125,3 +126,28 @@ def test_get_viewset_csv_content_site_id_column_passes_through_unchanged():
         result = list(get_viewset_csv_content(view_cls, "test-pk", None))
 
     assert result == _CSV_ROWS_WITH_SITE_ID
+
+
+def _gzip_response(csv_bytes: bytes) -> StreamingHttpResponse:
+    response = StreamingHttpResponse(iter([gzip.compress(csv_bytes)]))
+    response["Content-Encoding"] = "gzip"
+    return response
+
+
+@pytest.mark.parametrize("gzipped", [False, True], ids=["plain", "gzip"])
+def test_get_viewset_csv_content_yields_rows_lazily(gzipped):
+    """The non-cached path is a generator yielding the same rows as the old list-based code."""
+    rows = [
+        ["protocol", "name", "notes"],
+        ["beltfish", "Site One", 'multi\nline, "quoted"'],
+        ["beltfish", "Site Twö", ""],
+    ]
+    csv_bytes = _rows_to_bytes(rows)
+    response = _gzip_response(csv_bytes) if gzipped else StreamingHttpResponse(iter([csv_bytes]))
+    view_cls = _make_view_cls(response)
+
+    with patch("api.reports.summary_report.cached.get_cached_textfile", return_value=None):
+        result = get_viewset_csv_content(view_cls, "test-pk", None)
+        assert isinstance(result, types.GeneratorType)
+        assert next(result) == rows[0]
+        assert list(result) == rows[1:]

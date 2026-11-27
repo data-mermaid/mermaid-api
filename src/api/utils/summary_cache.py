@@ -305,10 +305,13 @@ def add_project_to_queue(project_id, skip_test_project=False):
         logger.exception(f"Failed to queue summary update for project {project_id}")
 
 
-# The report job uses a 180s SQS visibility timeout. Budget: SUMMARY_CACHE_MAX_WAIT
-# (80s) + report generation/S3/email (~30s typical, ~70s headroom for large projects).
+# The report job's SQS visibility timeout must outlast the whole job, otherwise the
+# message is redelivered while still running. Budget: SUMMARY_CACHE_MAX_WAIT (80s) +
+# report generation/S3/email (~30s typical, ~190s seen for 6+ project reports) with
+# generous headroom: 80 + 820 = 900s.
 SUMMARY_CACHE_POLL_INTERVAL = 5  # seconds
 SUMMARY_CACHE_MAX_WAIT = 80  # seconds
+SUMMARY_REPORT_VISIBILITY_TIMEOUT = 900  # seconds
 
 
 def wait_for_summary_cache(project_ids):
