@@ -54,7 +54,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd ${APP_USER} && useradd -m --no-log-init --uid ${APP_UID} -g ${APP_USER} ${APP_USER}
 
 WORKDIR /var/projects/${APP_USER}
-COPY requirements.txt .
+COPY requirements.txt constraints.txt ./
 # Install, then drop the packages' own test suites in the same layer. Nothing
 # imports them at runtime; the runtime-stage checks below confirm the app still
 # imports. Bytecode is kept so containers do not recompile on every start.

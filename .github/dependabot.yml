@@ -31,3 +31,21 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
+
+  # requirements.txt, requirements-dev.txt and constraints.txt, the pins for
+  # indirect dependencies (card 2285). Minor and patch
+  # updates come as one grouped PR per week. Each major update gets its own PR,
+  # since it may need code changes. Security-fix PRs don't wait for the
+  # cooldown and aren't grouped. The git-pinned mermaid-inference-contract is
+  # not bumped by Dependabot.
+  - package-ecosystem: pip
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      python-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
