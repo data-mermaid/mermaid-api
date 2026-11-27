@@ -228,6 +228,7 @@ bleaching_quadrat_collection_validations = [
         validator=ListPositiveIntegerValidator(
             list_path="data.obs_quadrat_benthic_percent",
             key_path="quadrat_number",
+            allow_zero=True,
         ),
         paths=["data.obs_quadrat_benthic_percent"],
         validation_level=ROW_LEVEL,

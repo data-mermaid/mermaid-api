@@ -2,8 +2,15 @@ import datetime
 import os
 
 import pytest
+from rest_framework.exceptions import ValidationError
 
 from api.ingest import utils
+from api.ingest.benthiclit_serializer import BenthicLITCSVSerializer
+from api.ingest.benthicpit_serializer import BenthicPITCSVSerializer
+from api.ingest.benthicpqt_serializer import BenthicPhotoQTCSVSerializer
+from api.ingest.fishbelt_serializer import FishBeltCSVSerializer
+from api.ingest.habitatcomplexity_serializer import HabitatComplexityCSVSerializer
+from api.ingest.macroinvertebrate_serializer import MacroInvertebrateCSVSerializer
 from api.models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
@@ -615,3 +622,33 @@ def test_create_context_profile_with_authuser(profile1):
 
     assert request.user.profile == profile1
     assert request.META["HTTP_AUTHORIZATION"].startswith("Bearer ")
+
+
+@pytest.mark.parametrize(
+    "serializer_class,field_name",
+    [
+        (BenthicPITCSVSerializer, "data__benthic_transect__number"),
+        (BenthicLITCSVSerializer, "data__benthic_transect__number"),
+        (HabitatComplexityCSVSerializer, "data__benthic_transect__number"),
+        (BenthicPhotoQTCSVSerializer, "data__quadrat_transect__number"),
+        (BenthicPhotoQTCSVSerializer, "data__quadrat_transect__num_quadrats"),
+        (BenthicPhotoQTCSVSerializer, "data__quadrat_transect__num_points_per_quadrat"),
+        (FishBeltCSVSerializer, "data__fishbelt_transect__number"),
+        (MacroInvertebrateCSVSerializer, "data__beltinvert_transect__number"),
+    ],
+)
+def test_ingest_fields_require_one_or_more(serializer_class, field_name):
+    field = serializer_class._declared_fields[field_name]
+
+    for value in ("-1", "0"):
+        with pytest.raises(ValidationError):
+            field.run_validation(value)
+
+    assert field.run_validation("1") == 1
+
+
+def test_ingest_pqt_quadrat_number_start_allows_zero():
+    field = BenthicPhotoQTCSVSerializer._declared_fields[
+        "data__quadrat_transect__quadrat_number_start"
+    ]
+    assert field.run_validation("0") == 0

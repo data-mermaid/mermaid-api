@@ -50,7 +50,7 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
         help_text="Depth of sample unit, in meters (e.g. 3)",
     )
     data__benthic_transect__number = serializers.IntegerField(
-        min_value=0,
+        min_value=1,
         label="Transect number",
         help_text="Sample unit number, as integer (e.g. 1)",
     )

@@ -21,6 +21,7 @@ from .validators import (
     ListRequiredValidator,
     ListScoreValidator,
     ManagementRuleValidator,
+    PositiveIntegerValidator,
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
@@ -124,6 +125,12 @@ habcomp_validations = [
         validator=RequiredValidator(
             path="data.benthic_transect.number",
         ),
+        paths=["data.benthic_transect.number"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=PositiveIntegerValidator(key_path="data.benthic_transect.number"),
         paths=["data.benthic_transect.number"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,

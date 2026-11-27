@@ -17,6 +17,7 @@ from .validators import (
     ListRequiredValidator,
     ManagementRuleValidator,
     ObservationCountValidator,
+    PositiveIntegerValidator,
     RegionValidator,
     RequiredValidator,
     SampleDateValidator,
@@ -121,6 +122,12 @@ benthic_lit_validations = [
         validator=RequiredValidator(
             path="data.benthic_transect.number",
         ),
+        paths=["data.benthic_transect.number"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=PositiveIntegerValidator(key_path="data.benthic_transect.number"),
         paths=["data.benthic_transect.number"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,

@@ -50,7 +50,7 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
         help_text="Depth of sample unit, in meters (e.g. 3)",
     )
     data__quadrat_transect__number = serializers.IntegerField(
-        min_value=0,
+        min_value=1,
         label="Transect number",
         help_text="Sample unit number, as integer (e.g. 1)",
     )
@@ -67,7 +67,8 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
         label="Transect length surveyed",
         help_text="Length of transect for a sample unit, in meters. May include decimal (e.g. 50.0).",
     )
-    data__quadrat_transect__num_quadrats = PositiveIntegerField(
+    data__quadrat_transect__num_quadrats = serializers.IntegerField(
+        min_value=1,
         label="Number of quadrats",
         help_text="Total number of quadrats per transect, as an integer (e.g. 10).",
     )
@@ -82,7 +83,8 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
         label="First quadrat number",
         help_text="Number of the first quadrat/photo along the transect, as an integer (e.g. 1).",
     )
-    data__quadrat_transect__num_points_per_quadrat = PositiveIntegerField(
+    data__quadrat_transect__num_points_per_quadrat = serializers.IntegerField(
+        min_value=1,
         label="Number of points per quadrat",
         help_text="Total number of points per quadrat used in a transect, as an integer (e.g. 100).",
     )
