@@ -211,7 +211,12 @@ def ingest(
                 transaction.savepoint_commit(sid)
 
     if dry_run is False and bulk_submission and not is_bulk_invalid:
-        submit_output = submit_collect_records(profile, record_ids, validation_suppressants)
+        submit_output = submit_collect_records(
+            profile,
+            record_ids,
+            serializer_class,
+            validation_suppressants=validation_suppressants,
+        )
         output["submit"] = submit_output
 
     return new_records, output
