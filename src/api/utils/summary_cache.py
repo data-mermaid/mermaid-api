@@ -200,6 +200,13 @@ def _update_project_summary_sample_event(project_id, skip_test_project=True):
             for field in SummarySampleEventModel._meta.fields
         }
         values["suggested_citation"] = suggested_citation
+        # The flat /summarysampleevents/ endpoint serves one cache to everyone
+        # (UnauthenticatedReadOnlyPermission, no member/anon split), so depth here is
+        # effectively public. Depth averages sample units across every protocol and no
+        # single data policy covers it, so keep it out entirely; members read depth from
+        # the project-scoped restricted cache instead (card 2292/2231).
+        values["depth_avg"] = None
+        values["depth_sd"] = None
         SummarySampleEventModel.objects.create(**values)
 
 

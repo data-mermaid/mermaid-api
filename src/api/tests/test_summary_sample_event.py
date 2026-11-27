@@ -81,17 +81,12 @@ def test_summary_sample_event(
         == obs_benthic_pit1_benthic_category_avgs[origin]
     )
 
-    # depth_avg/depth_sd are top-level fields aggregated across sample units from
-    # every protocol sharing this sample_event_id.
-    depths = [
-        float(fishbelt_transect1.depth),
-        float(benthic_transect1.depth),
-        float(benthic_transect1_2.depth),
-    ]
-    expected_avg = sum(depths) / len(depths)
-    expected_sd = (sum((d - expected_avg) ** 2 for d in depths) / (len(depths) - 1)) ** 0.5
-    assert pytest.approx(expected_avg, 0.01) == float(response_data["results"][0]["depth_avg"])
-    assert pytest.approx(expected_sd, 0.01) == float(response_data["results"][0]["depth_sd"])
+    # depth_avg/depth_sd aggregate sample units across every protocol, so no single data
+    # policy covers them. The flat endpoint serves one cache to everyone, so depth is kept
+    # out entirely here; members read it from the project-scoped restricted cache
+    # (card 2292/2231).
+    assert response_data["results"][0]["depth_avg"] is None
+    assert response_data["results"][0]["depth_sd"] is None
 
 
 def test_summary_sample_event_fields_param_invalid(api_client_public):
