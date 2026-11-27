@@ -1,3 +1,4 @@
+import uuid
 from collections import defaultdict
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -11,6 +12,45 @@ from api.utils.sample_unit_methods import get_project
 from ...utils.project import delete_project
 from ...utils.q import submit_job
 from .utils import create_view_request
+
+
+def _normalize_uuid(value):
+    """Canonical string form so "ABC..." and "abc..." compare equal."""
+    if value is None:
+        return None
+    try:
+        return str(uuid.UUID(str(value)))
+    except ValueError:
+        return str(value)
+
+
+def _authorized_project_id(record, model_class, record_id):
+    """The project the push was authorized against. Used to confirm the record being
+    written actually belongs to that project (sync BOLA, card 2257).
+
+    The permission check authorizes the body `project` whenever it is present, also
+    for a Project record, so use it first. Fall back to the record id only for a
+    Project record without a body `project`."""
+    proj = record.get("project")
+    if proj is None and model_class == Project:
+        proj = record_id
+    return _normalize_uuid(proj)
+
+
+def _instance_project_id(instance):
+    if isinstance(instance, Project):
+        return _normalize_uuid(instance.pk)
+    return _normalize_uuid(getattr(instance, "project_id", None))
+
+
+def _wrong_project(instance, record, model_class, record_id):
+    """True when `instance` belongs to a different project than the one the push
+    was authorized against - a cross-tenant write by record id."""
+    authorized = _authorized_project_id(record, model_class, record_id)
+    if authorized is None:
+        return False
+    inst_proj = _instance_project_id(instance)
+    return inst_proj is not None and inst_proj != authorized
 
 
 def get_request_method(record):
@@ -85,6 +125,11 @@ def apply_changes(request, serializer, record, force=False):
         try:
             instance = model_class.objects.get(pk=record_id)
 
+            # The permission check authorized a project; refuse to act on a record
+            # that belongs to a different one (cross-tenant delete by id, card 2257).
+            if _wrong_project(instance, record, model_class, record_id):
+                return 403, "Forbidden", "Record belongs to a different project"
+
             # If deleting a project, deliberately delete all protected objects!
             if model_class == Project:
                 submit_job(0, True, delete_project, record_id)
@@ -140,6 +185,12 @@ def apply_changes(request, serializer, record, force=False):
                 "Does Not Exist",
                 f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist",
             )
+
+        # Refuse to update a record that belongs to a different project than the one
+        # the push was authorized against, and refuse to move it to another project
+        # (card 2257). To pass, record["project"] must equal the instance's project.
+        if _wrong_project(instance, record, model_class, record_id):
+            return 403, "Forbidden", "Record belongs to a different project"
 
         status_code = 200
     else:
