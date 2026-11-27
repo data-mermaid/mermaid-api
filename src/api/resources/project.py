@@ -614,11 +614,27 @@ class ProjectViewSet(BaseApiViewSet):
         if qp_replace_obj_id is None:
             raise exceptions.ValidationError("'replace' is required", code=400)
 
+        # Validate the ids before the broad except below, so bad input is a 400 and not a
+        # 500: a non-UUID raises ValidationError inside the query, and a replace id that is
+        # also in find makes replace_sampleunit_objs delete the replacement under a PROTECT
+        # FK (ProtectedError). Both used to surface as "Unknown error" 500s (card 2289).
+        if not isinstance(qp_find_obj_ids, list):
+            raise exceptions.ValidationError("'find' must be a list", code=400)
+        check_uuid(qp_replace_obj_id)
+        for find_obj_id in qp_find_obj_ids:
+            check_uuid(find_obj_id)
+        if qp_replace_obj_id in qp_find_obj_ids:
+            raise exceptions.ValidationError(
+                f"'replace' {field} cannot also appear in 'find'", code=400
+            )
+
         profile = request.user.profile
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                replace_obj = obj_cls.objects.get(id=qp_replace_obj_id)
+                # Scope the replacement to the URL project too: loading it globally let a
+                # caller merge a find object into another project's object (card 2289).
+                replace_obj = obj_cls.objects.get(id=qp_replace_obj_id, project__id=project_id)
                 find_objs = obj_cls.objects.filter(id__in=qp_find_obj_ids, project__id=project_id)
                 results = replace_sampleunit_objs(find_objs, replace_obj, field, profile)
                 transaction.savepoint_commit(sid)
