@@ -238,7 +238,7 @@ def decode_rsa(token):
         jwt.InvalidIssuedAtError,
         jwt.MissingRequiredClaimError,
     ) as clmerr:
-        print(clmerr)
+        logger.debug(clmerr)
         raise exceptions.AuthenticationFailed("incorrect claims")
     except Exception:
         msg = "Unable to parse authentication"
