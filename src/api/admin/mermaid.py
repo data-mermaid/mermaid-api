@@ -4,6 +4,7 @@ from django.contrib.admin.utils import unquote
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Prefetch, Q
+from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html, format_html_join
@@ -369,14 +370,22 @@ class ManagementAdmin(BaseAdmin):
         # permission check, so a denied delete still moved the data (card 2293/2231).
         if request.method == "POST" and self.has_delete_permission(request, obj):
             replacement_obj = request.POST.get("replacement_obj")
-            if (replacement_obj is None or replacement_obj == "") and atleast_one_se:
+
+            # A replacement is required whenever anything references this management -
+            # sample events OR collect records. Without it the loop below would blank the
+            # collect records' management to ""/None, silently losing it (card 2291/2231).
+            needs_replacement = atleast_one_se or crs.exists()
+            if (replacement_obj is None or replacement_obj == "") and needs_replacement:
                 self.message_user(
                     request,
                     "To delete, you must select a replacement object to assign to all items "
                     "using this object.",
                     level=messages.ERROR,
                 )
-                return super().delete_view(request, object_id, extra_context)
+                # Re-show the confirmation page instead of falling through to super()'s
+                # POST handler, which would delete the object anyway when nothing PROTECTs
+                # it, orphaning the collect records (card 2293/2231).
+                return HttpResponseRedirect(request.path)
 
             # The replacement must belong to the same project; it was taken from POST and
             # applied with no scope, so a management from another project could be set
@@ -390,14 +399,19 @@ class ManagementAdmin(BaseAdmin):
                     "The replacement must belong to the same project.",
                     level=messages.ERROR,
                 )
+                return HttpResponseRedirect(request.path)
+
+            # Reassign and delete atomically so a failed/blocked delete does not leave the
+            # sample events and collect records pointing at the replacement while the
+            # management survives (card 2291/2231).
+            with transaction.atomic():
+                for cr in crs:
+                    if "sample_event" in cr.data and "management" in cr.data["sample_event"]:
+                        cr.data["sample_event"]["management"] = replacement_obj
+                    cr.save()
+
+                ses.update(management=replacement_obj)
                 return super().delete_view(request, object_id, extra_context)
-
-            for cr in crs:
-                if "sample_event" in cr.data and "management" in cr.data["sample_event"]:
-                    cr.data["sample_event"]["management"] = replacement_obj
-                cr.save()
-
-            ses.update(management=replacement_obj)
 
         return super().delete_view(request, object_id, extra_context)
 

@@ -12,6 +12,7 @@ from django.contrib.gis.geos import Point
 from django.test import Client
 
 from api.models import (
+    CollectRecord,
     Management,
     Notification,
     Profile,
@@ -106,3 +107,53 @@ def test_delete_view_rejects_cross_project_replacement(
     )
     se.refresh_from_db()
     assert se.management_id == mgmt.id  # cross-project replacement rejected, not applied
+
+
+def _collect_record(project, mgmt):
+    owner = Profile.objects.create(
+        email=f"vt2293-cr-{mgmt.pk}@example.invalid", first_name="cr", last_name="owner"
+    )
+    return CollectRecord.objects.create(
+        project=project,
+        profile=owner,
+        data={"sample_event": {"management": str(mgmt.pk)}},
+    )
+
+
+def test_delete_view_rejecting_replacement_keeps_management_with_crs_only(db, project1, project2):
+    # A management referenced only by collect records (no SampleEvent PROTECT) must not be
+    # deleted when the replacement is rejected; otherwise the CRs are orphaned.
+    user = _staff(["view_management", "delete_management"])
+    client = Client()
+    client.force_login(user)
+
+    mgmt = Management.objects.create(name="vt2293-A", project=project1)
+    foreign = Management.objects.create(name="vt2293-B", project=project2)
+    cr = _collect_record(project1, mgmt)
+
+    client.post(
+        f"/admin/api/management/{mgmt.pk}/delete/",
+        {"replacement_obj": str(foreign.pk), "post": "yes"},
+    )
+    assert Management.objects.filter(pk=mgmt.pk).exists()  # not deleted
+    cr.refresh_from_db()
+    assert cr.data["sample_event"]["management"] == str(mgmt.pk)  # not reassigned
+
+
+def test_delete_view_requires_replacement_when_only_crs_exist(db, project1):
+    # With no replacement and no SampleEvent, a CR-referenced management must not be
+    # deleted and its CRs must not be blanked to "".
+    user = _staff(["view_management", "delete_management"])
+    client = Client()
+    client.force_login(user)
+
+    mgmt = Management.objects.create(name="vt2293-A", project=project1)
+    cr = _collect_record(project1, mgmt)
+
+    client.post(
+        f"/admin/api/management/{mgmt.pk}/delete/",
+        {"replacement_obj": "", "post": "yes"},
+    )
+    assert Management.objects.filter(pk=mgmt.pk).exists()  # not deleted
+    cr.refresh_from_db()
+    assert cr.data["sample_event"]["management"] == str(mgmt.pk)  # not blanked
