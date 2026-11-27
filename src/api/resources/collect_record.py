@@ -146,7 +146,9 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         record_ids = request.data.get("ids") or []
         profile = request.user.profile
         try:
-            output = validate_collect_records(profile, record_ids, CollectRecordSerializer)
+            output = validate_collect_records(
+                profile, record_ids, CollectRecordSerializer, project_id=project_pk
+            )
         except ValueError as err:
             raise ParseError(err) from err
 
@@ -162,7 +164,9 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         profile = request.user.profile
 
         try:
-            output = submit_collect_records(profile, record_ids, CollectRecordSerializer)
+            output = submit_collect_records(
+                profile, record_ids, CollectRecordSerializer, project_id=project_pk
+            )
         except ValueError as err:
             raise ParseError(err) from err
 

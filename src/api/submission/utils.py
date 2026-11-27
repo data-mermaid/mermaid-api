@@ -389,13 +389,19 @@ def validate_collect_record(
         return _save_validation_output(profile, record, serializer_class, validation_output)
 
 
-def validate_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
+def validate_collect_records(
+    profile, record_ids, serializer_class, validation_suppressants=None, project_id=None
+):
     output = {}
     for record_id in record_ids:
         check_uuid(record_id)
 
     trace_attributes = RecordTraceAttributes()
     records = CollectRecord.objects.filter(id__in=record_ids)
+    # Scope to the request's project so a caller can't validate a record in another
+    # project by id (BOLA, card 2289/2231). Records outside it are simply not found.
+    if project_id is not None:
+        records = records.filter(project_id=project_id)
     for record in records.iterator():
         output[str(record.pk)] = validate_collect_record(
             profile, record, serializer_class, validation_suppressants, trace_attributes
@@ -404,12 +410,19 @@ def validate_collect_records(profile, record_ids, serializer_class, validation_s
     return output
 
 
-def submit_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
+def submit_collect_records(
+    profile, record_ids, serializer_class, validation_suppressants=None, project_id=None
+):
     output = {}
     request = MockRequest(profile=profile)
     trace_attributes = RecordTraceAttributes()
     for record_id in record_ids:
-        collect_record = CollectRecord.objects.get_or_none(id=record_id)
+        # Scope to the request's project so a caller can't submit a record in another
+        # project by id (BOLA, card 2289/2231). Records outside it read as "Not found".
+        lookup = {"id": record_id}
+        if project_id is not None:
+            lookup["project_id"] = project_id
+        collect_record = CollectRecord.objects.get_or_none(**lookup)
         if collect_record is None:
             output[record_id] = dict(status=ERROR, message=gettext_lazy("Not found"))
             continue
