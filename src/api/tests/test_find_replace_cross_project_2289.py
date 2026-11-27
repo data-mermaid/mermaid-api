@@ -37,6 +37,31 @@ def test_find_replace_rejects_cross_project_replacement(
     assert Site.objects.filter(pk=site1.pk).exists()  # A source not deleted
 
 
+def test_find_replace_non_uuid_replace_is_400(api_client1, project1, site1):
+    # A non-UUID replace used to raise ValidationError inside the query and surface as a
+    # 500; it must be a 400 (card 2289).
+    url = reverse("project-find-and-replace-sites", args=[str(project1.pk)])
+    response = api_client1.put(
+        url, {"find": [str(site1.pk)], "replace": "not-a-uuid"}, format="json"
+    )
+    assert response.status_code == 400, response.content
+    assert Site.objects.filter(pk=site1.pk).exists()
+
+
+def test_find_replace_replace_also_in_find_is_400(api_client1, project1, site1, site2):
+    # replace present in find used to make replace_sampleunit_objs delete the replacement
+    # under a PROTECT FK (ProtectedError) and surface as a 500; it must be a 400 (card 2289).
+    url = reverse("project-find-and-replace-sites", args=[str(project1.pk)])
+    response = api_client1.put(
+        url,
+        {"find": [str(site1.pk), str(site2.pk)], "replace": str(site1.pk)},
+        format="json",
+    )
+    assert response.status_code == 400, response.content
+    assert Site.objects.filter(pk=site1.pk).exists()  # replacement kept
+    assert Site.objects.filter(pk=site2.pk).exists()  # other find source kept
+
+
 def test_find_replace_same_project_still_works(api_client1, project1, site1, site2):
     # Control: a same-project replacement is unaffected by the fix.
     site1.notes = "keep me"
