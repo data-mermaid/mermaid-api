@@ -185,12 +185,21 @@ Dockerfiles, same repo, different tag prefixes).
 
 | Tag pattern | Meaning | Who pushes |
 |---|---|---|
-| `:training-latest` | Latest training-purpose image. CPU-only by convention in mermaid-classifier; GPU in mermaid-segmentation. | Anyone with launcher role |
-| `:features-latest` | (mermaid-classifier only) Latest GPU feature-extraction image. | Anyone |
-| `:processing-latest` | (mermaid-segmentation only) Latest GPU processing image. | Anyone |
-| `:smoke` | Image known to pass the repo's local smoke recipe. Promoted manually. | Anyone |
-| `:prod-YYYY-MM-DD` | Pinned production build. Don't overwrite. | Anyone, by convention |
-| `:user-<name>-<purpose>-YYYY-MM-DD` | Personal experimental tags. e.g. `:user-greg-eval-2026-05-25`. | The named user |
+| `:training-latest` | Latest training-purpose image. CPU-only by convention in mermaid-classifier; GPU in mermaid-segmentation. | Classifier repo: anyone with launcher role. Segmentation repo: the `sagemaker-image` workflow only. |
+| `:training-<git sha>` | (mermaid-segmentation-jobs only) Image for one commit of `main`. The tag is immutable. The repo keeps the newest 50 `training-*` images; older ones expire. | The `sagemaker-image` workflow only |
+| `:features-latest` | (mermaid-classifier-jobs only) Latest GPU feature-extraction image. | Anyone |
+| `:processing-latest` | (mermaid-classifier-jobs only) Latest GPU processing image. | Anyone |
+| `:smoke` | (mermaid-classifier-jobs only) Image known to pass the repo's local smoke recipe. Promoted manually. | Anyone |
+| `:prod-YYYY-MM-DD` | (mermaid-classifier-jobs only) Pinned production build. Don't overwrite. | Anyone, by convention |
+| `:user-<name>-<purpose>-YYYY-MM-DD` | (mermaid-classifier-jobs only) Personal experimental tags. e.g. `:user-greg-eval-2026-05-25`. | The named user |
+
+`mermaid-segmentation-jobs` is tag-immutable, except for `training-latest`.
+Only the `sagemaker-image` GitHub Actions workflow in the
+mermaid-segmentation repo pushes to it. The launcher role can read this repo
+but cannot push to it. The workflow runs from `main` and
+assumes the `mermaid-segmentation-image-push-role` OIDC role, which trusts
+only the `sagemaker-image` GitHub environment. Each run pushes
+`training-<git sha>` and moves `training-latest` to the same image.
 
 The launcher YAML's `job.image` field accepts either a short form
 (`<repo>:<tag>`, where `<repo>` is the bare repo name and the launcher
@@ -201,11 +210,15 @@ repo or account needs an IAM change to `SagemakerJobRuntimePolicy` first.
 
 ### Build/push recipe
 
+This recipe is for `mermaid-classifier-jobs` only. The launcher role cannot
+push to `mermaid-segmentation-jobs`. Push to that
+repo through the `sagemaker-image` workflow.
+
 ```bash
 export AWS_PROFILE=wcs-launcher
 ACCT=554812291621
 REGION=us-east-1
-REPO=mermaid-classifier-jobs        # or mermaid-segmentation-jobs
+REPO=mermaid-classifier-jobs
 TAG=user-$USER-$(date +%Y-%m-%d)    # or whatever convention applies
 
 aws ecr get-login-password --region $REGION \
@@ -229,10 +242,26 @@ docker push $ACCT.dkr.ecr.$REGION.amazonaws.com/$REPO:$TAG
   tracking servers.
 - The job also writes artifacts straight to the app's S3 artifact store
   (`ArtifactStoreUri` from `describe-mlflow-app`). The execution role has
-  read/write on `dev-datamermaid-sm-data` and `mermaid-mlflow`, the two
-  stores in use. A new app with another store needs a new grant.
+  read/write on `mermaid-mlflow` and access to `dev-datamermaid-sm-data`
+  (see "Execution role access"), the two stores in use. A new app with
+  another store needs a new grant.
 - Each repo's docs should embed the relevant app ARN in its example
   `--mlflow-tracking-uri` invocation.
+
+## Execution role access
+
+`dev-sm-execution-role` is the role jobs run as.
+
+- **Staging bucket writes.** On `dev-datamermaid-sm-data`, write is limited
+  to two prefixes:
+  - `runs/*`: job output, checkpoints, and config.
+  - `mlflow/*`: the artifact store of the mermaid-classifier MLflow App,
+    which runs as this role.
+- **Secrets.** Jobs can read the Secrets Manager secret
+  `mermaid-segmentation/hf-token`, a Hugging Face read token. CDK does not
+  create it. Create it by hand. The launcher's `HF_TOKEN_SECRET_ID` must
+  name it. The role's grant matches `mermaid-segmentation/hf-token-*`,
+  because Secrets Manager adds a random suffix to the secret ARN.
 
 ## Checklist for new launcher PRs (any repo)
 
