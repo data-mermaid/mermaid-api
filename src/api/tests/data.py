@@ -1,9 +1,9 @@
 import datetime
 import datetime as dt
 
+import jwt
 from django.conf import settings
 from django.contrib.gis.geos import Point
-from jose import jwt
 
 from api.models import (
     BeltTransectWidth,
