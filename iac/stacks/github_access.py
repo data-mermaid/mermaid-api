@@ -143,6 +143,10 @@ class GithubAccessStack(Stack):
             externalOidcProvider
         )
 
+        self.segmentation_image_push_role = self._create_segmentation_image_push_role(
+            externalOidcProvider
+        )
+
         self.classifier_release_role = self._create_classifier_release_role(externalOidcProvider)
 
     def _create_inference_image_push_role(
@@ -210,6 +214,72 @@ class GithubAccessStack(Stack):
             value=role.role_arn,
             description="IAM role assumed by the mermaid-inference build-push workflow",
             export_name="MermaidInferenceImagePushRoleArn",
+        )
+
+        return role
+
+    def _create_segmentation_image_push_role(
+        self, oidc_provider: iam.OpenIdConnectProvider
+    ) -> iam.Role:
+        """Least-privilege role assumed by the mermaid-segmentation
+        `sagemaker-image` workflow via GitHub OIDC.
+
+        Pushes the SageMaker training image to the mermaid-segmentation-jobs
+        ECR repo. Trust uses the environment `sub` because that job runs in
+        the `sagemaker-image` GitHub environment (deployment-branch policy:
+        main only), so a ref-based `sub` would never match.
+        """
+        role = iam.Role(
+            self,
+            "MermaidSegmentationImagePushRole",
+            role_name="mermaid-segmentation-image-push-role",
+            assumed_by=iam.WebIdentityPrincipal(
+                identity_provider=oidc_provider.open_id_connect_provider_arn,
+                conditions={
+                    "StringEquals": {
+                        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                        "token.actions.githubusercontent.com:sub": (
+                            "repo:data-mermaid/mermaid-segmentation:environment:sagemaker-image"
+                        ),
+                    },
+                },
+            ),
+            max_session_duration=Duration.hours(1),
+        )
+
+        repo_arn = f"arn:aws:ecr:{self.region}:{self.account}:repository/mermaid-segmentation-jobs"
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "SegmentationImagePushPolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["ecr:GetAuthorizationToken"],
+                        resources=["*"],  # required: not resource-scopable
+                    ),
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=[
+                            "ecr:BatchCheckLayerAvailability",
+                            "ecr:InitiateLayerUpload",
+                            "ecr:UploadLayerPart",
+                            "ecr:CompleteLayerUpload",
+                            "ecr:PutImage",
+                            "ecr:BatchGetImage",
+                        ],
+                        resources=[repo_arn],
+                    ),
+                ],
+            )
+        )
+
+        CfnOutput(
+            self,
+            "MermaidSegmentationImagePushRoleArn",
+            value=role.role_arn,
+            description="IAM role assumed by the mermaid-segmentation sagemaker-image workflow",
+            export_name="MermaidSegmentationImagePushRoleArn",
         )
 
         return role

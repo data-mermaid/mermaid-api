@@ -64,7 +64,10 @@ class SagemakerStack(cdk.Stack):
         # Create S3 bucket for SageMaker data
         self.sm_data_bucket = self.create_data_bucket()
 
-        self.sm_data_bucket.grant_read_write(self.sm_execution_role)
+        # Jobs write run output and checkpoints under runs/; the mermaid-classifier
+        # MLflow App (which runs as this role) stores artifacts under mlflow/.
+        self.sm_data_bucket.grant_read_write(self.sm_execution_role, "runs/*")
+        self.sm_data_bucket.grant_read_write(self.sm_execution_role, "mlflow/*")
 
         # Create immutable S3 bucket for versioned image classification datasets
         self.ic_datasets_bucket = self.create_ic_datasets_bucket()
@@ -470,20 +473,32 @@ class SagemakerStack(cdk.Stack):
 
         Sibling of `create_classifier_jobs_repo`. Both repos share
         the `mermaid-*-jobs` naming pattern so the launcher role's ECR
-        resource ARN can target them with a single wildcard. Tag-based
-        separation (e.g. `:training-latest`, `:processing-latest`,
-        `:user-<name>-...`) is documented in the convention doc.
+        resource ARN can target them with a single wildcard. Only the
+        mermaid-segmentation `sagemaker-image` workflow pushes here, and it
+        writes two tags: `training-<sha>` (immutable) and `training-latest`
+        (moving). The convention doc describes the tags.
+
+        The lifecycle rule keeps the newest 50 `training-*` images. It has
+        no untagged-expiry rule: untagged images here are the buildx
+        attestation children of tagged indexes, and expiring them could
+        break the tagged images.
         """
         repo = ecr.Repository(
             self,
             f"{self.prefix}MermaidSegmentationJobsRepo",
             repository_name="mermaid-segmentation-jobs",
             image_scan_on_push=True,
+            image_tag_mutability=ecr.TagMutability.IMMUTABLE_WITH_EXCLUSION,
+            image_tag_mutability_exclusion_filters=[
+                ecr.ImageTagMutabilityExclusionFilter.wildcard("training-latest")
+            ],
             removal_policy=cdk.RemovalPolicy.RETAIN,
             lifecycle_rules=[
                 ecr.LifecycleRule(
-                    description="Keep last 10 images",
-                    max_image_count=10,
+                    description="Keep the last 50 training images",
+                    tag_status=ecr.TagStatus.TAGGED,
+                    tag_prefix_list=["training-"],
+                    max_image_count=50,
                     rule_priority=1,
                 ),
             ],
@@ -507,7 +522,9 @@ class SagemakerStack(cdk.Stack):
         Trust: any principal in this account whose ARN matches the
         SageMaker SSO permission set.
 
-        Permissions: push/pull on the `mermaid-*-jobs` ECR repos, submit and
+        Permissions: pull on the `mermaid-*-jobs` ECR repos and push to
+        `mermaid-classifier-jobs` only (segmentation images are pushed only
+        by CI), submit and
         observe SageMaker Training+Processing jobs, pass the existing
         SageMaker execution role as the job's RoleArn, read/write the
         run-scoped prefix in the SageMaker data bucket, tail CloudWatch logs.
@@ -533,8 +550,10 @@ class SagemakerStack(cdk.Stack):
             max_session_duration=cdk.Duration.hours(8),
         )
 
-        # ECR: token + push/pull/manage on mermaid-*-jobs repos in this
-        # account. GetAuthorizationToken must be on '*' (AWS rule).
+        # ECR: token + read on mermaid-*-jobs repos (the segmentation
+        # launcher resolves tags to digests); write only on
+        # mermaid-classifier-jobs, since CI alone pushes segmentation images.
+        # GetAuthorizationToken must be on '*' (AWS rule).
         role.attach_inline_policy(
             iam.Policy(
                 self,
@@ -554,6 +573,15 @@ class SagemakerStack(cdk.Stack):
                             "ecr:DescribeImages",
                             "ecr:DescribeRepositories",
                             "ecr:ListImages",
+                        ],
+                        resources=[
+                            f"arn:aws:ecr:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
+                            ":repository/mermaid-*-jobs",
+                        ],
+                    ),
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=[
                             "ecr:InitiateLayerUpload",
                             "ecr:UploadLayerPart",
                             "ecr:CompleteLayerUpload",
@@ -562,7 +590,7 @@ class SagemakerStack(cdk.Stack):
                         ],
                         resources=[
                             f"arn:aws:ecr:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
-                            ":repository/mermaid-*-jobs",
+                            ":repository/mermaid-classifier-jobs",
                         ],
                     ),
                 ],
