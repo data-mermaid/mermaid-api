@@ -200,11 +200,23 @@ def _update_project_summary_sample_event(project_id, skip_test_project=True):
             for field in SummarySampleEventModel._meta.fields
         }
         values["suggested_citation"] = suggested_citation
+        # The flat /summarysampleevents/ endpoint serves one cache to everyone
+        # (UnauthenticatedReadOnlyPermission, no member/anon split), so depth here is
+        # effectively public. Depth averages sample units across every protocol and no
+        # single data policy covers it, so keep it out entirely; members read depth from
+        # the project-scoped restricted cache instead (card 2292/2231).
+        values["depth_avg"] = None
+        values["depth_sd"] = None
         SummarySampleEventModel.objects.create(**values)
 
 
 def _update_project_summary_sample_events(
-    proj_summary_se_model, project_id, timestamp, skip_test_project=True, has_access="false"
+    proj_summary_se_model,
+    project_id,
+    timestamp,
+    skip_test_project=True,
+    has_access="false",
+    hide_depth=False,
 ):
     if skip_test_project and Project.objects.filter(pk=project_id, status=Project.TEST).exists():
         proj_summary_se_model.objects.filter(project_id=project_id).delete()
@@ -219,6 +231,12 @@ def _update_project_summary_sample_events(
         suggested_citation = _get_suggested_citation(project_id)
         for record in records:
             record["suggested_citation"] = suggested_citation
+            # Depth averages all sample units at an event regardless of protocol, so no
+            # single data policy covers them; keep them out of the unrestricted
+            # (non-member) cache (card 2292/2231).
+            if hide_depth:
+                record["depth_avg"] = None
+                record["depth_sd"] = None
 
         tags = [{"id": str(t.pk), "name": t.name} for t in project.tags.all()]
         admins = project.profiles.filter(role=ProjectProfile.ADMIN)
@@ -275,7 +293,11 @@ def _update_unrestricted_project_summary_sample_events(
     project_id, timestamp, skip_test_project=True
 ):
     _update_project_summary_sample_events(
-        UnrestrictedProjectSummarySampleEvent, project_id, timestamp, skip_test_project
+        UnrestrictedProjectSummarySampleEvent,
+        project_id,
+        timestamp,
+        skip_test_project,
+        hide_depth=True,
     )
 
 
