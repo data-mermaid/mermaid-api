@@ -1,6 +1,8 @@
 from aws_cdk import aws_ecs as ecs, aws_iam as iam
 
-ADOT_IMAGE = "public.ecr.aws/aws-observability/aws-otel-collector:v0.47.0"
+# Pinned by tag and image-index digest. Nothing bumps this automatically:
+# check the ADOT releases and update both when the weekly trivy-adot scan flags it.
+ADOT_IMAGE = "public.ecr.aws/aws-observability/aws-otel-collector:v0.51.0@sha256:955e240b27d7fd3c7995fd937db4b963975948eb553f656d8c37a564e5b5e07d"
 
 
 def add_adot_sidecar(task_def: ecs.TaskDefinition, name: str) -> None:
